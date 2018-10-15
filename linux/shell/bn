@@ -1,0 +1,85 @@
+#!/bin/bash
+#批量命名，自动给文件或文件夹加前缀  最多支持不重复字符62个, 超过62个不做处理
+# bn   自动给当前文件夹里所有文件或文件夹加不重复的单字符前缀
+# bn /D/    自动给/D/下所有文件文件夹加不重复的单字符前缀
+# bn c 自动取消当前文件夹所有文件文件夹不重复的单字符前缀
+
+rand=(0 1 2 3 4 5 6 7 8 9 a b c d e f g h i j k l m n o p q r s t u v w x y z A B C D E F G H I J K L M N O P Q R S T U V W X Y Z)
+
+function chr () {
+    for k in `seq 0 62`
+    do
+        if [ $1x == ${rand[$k]}x ]
+        then
+            return 1
+        fi
+    done
+    return 0
+}
+
+if [ $1x != x -a x$1 != xc ]
+then
+    cd $1
+fi
+
+j=0
+
+#for i in `find . -maxdepth 1 -type f -o -type d`
+#获取当前文件夹里所有文件文件夹导入数组old
+ls > /tmp/bn.tmp
+len=`wc -l /tmp/bn.tmp | cut -d" " -f1`
+for i in `seq 1 $len`
+do
+    old[j]=`sed -n "${i}p" /tmp/bn.tmp`
+    #echo ${old[j]}
+    let j++
+done
+
+#记录文件夹已经设置前缀字符下标
+n=0
+
+for i in `seq 0 $j`
+do
+    #截取前两个字符判断是否已经加过前缀
+    t=`echo "${old[$i]}" | sed -nr 's/.(.).*/\1/p'`
+    f=`echo "${old[$i]}" | sed -nr 's/(.).*/\1/p'`
+    chr $f
+
+    if [ $? -eq 1 -a x$t == x_ ]
+    then
+        if [ x$1 == xc -a "${old[$i]}"x != x ]
+        then
+            new=`echo "${old[$i]}" | sed -nr 's/..(.*)/\1/p'`
+            mv "${old[$i]}" "$new"
+        fi
+        some[n]=$f
+        let n++
+        continue
+    fi
+
+    #保存前缀名
+    newchar=
+    #分配在当前文件夹不重复的前缀名
+    for m in `seq 0 62`
+    do
+        if echo ${some[@]} | grep ${rand[$m]} >& /dev/null
+        then
+            echo -n
+        else
+            newchar=${rand[$m]}
+            some[n]=${rand[$m]}
+            let n++
+            break
+        fi
+    done
+
+    if [ ${newchar}x = x ]
+    then
+            break
+    fi
+
+    if [ x$1 != xc -a "${old[$i]}"x != x ]
+    then
+        mv "${old[$i]}" "${newchar}_${old[$i]}"
+    fi
+done

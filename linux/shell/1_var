@@ -1,0 +1,32 @@
+#!/bin/bash
+
+s="usr/share/doc/kyo/home/tom/kyo"
+
+echo "s = $s"
+echo
+echo '${#s} = '${#s}
+echo
+echo '${s:0:4} = '${s:0:4}
+echo '${s:0:-4} = '${s:0:-4}
+echo
+echo '${s#*/} = '${s#*/}
+echo '${s##*/} = '${s##*/}
+echo '${s%/*} = '${s%/*}
+echo '${s%%/*} = '${s%%/*}
+echo
+echo '${s/kyo/KYO} = '${s/kyo/KYO}
+echo '${s//kyo/KYO} = '${s//kyo/KYO}
+
+export LANG=en_US.UTF-8
+export LANGUAGE=en_US:en
+
+# 自动识别网卡设备
+eth_name=$(ifconfig | egrep '^e' | awk '{print $1}')
+ip=$(ifconfig $eth_name)
+
+ip=${ip#*inet addr:}
+ip=${ip%%Bcast:*}
+ip=${ip//\ /}
+
+echo "|"$ip"|"
+

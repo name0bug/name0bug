@@ -1,0 +1,45 @@
+#!/bin/bash
+
+read -p "请输入边长: " num
+
+tr_type=${TYPE-1}
+
+for row in $(seq 1 $num); do
+    for col in $(seq 1 $num); do
+
+        pos=$[num - row + 1]
+
+        (($tr_type == 1 && $col <= $row         \
+            || $tr_type == 2 && $col >= $row    \
+            || $tr_type == 3 && $col <= $pos    \
+            || $tr_type == 4 && $col >= $pos))  \
+            && printf " * " || printf "   "
+
+        # case "$tr_type" in
+            # 1) [ $col -le $row ] && printf " * " || printf "   " ;;
+            # 2) [ $col -ge $row ] && printf " * " || printf "   " ;;
+            # 3) [ $col -le $[num - row + 1] ] && printf " * " || printf "   " ;;
+            # 4) [ $col -ge $[num - row + 1] ] && printf " * " || printf "   " ;;
+        # esac
+
+    done
+    echo
+done
+
+for i in $(seq 0 $[num * num - 1]) ; do
+    col=$[i % num]
+    row=$[i / num]
+
+    pos=$[num - row - 1]
+
+    (($tr_type == 1 && $col <= $row         \
+        || $tr_type == 2 && $col >= $row    \
+        || $tr_type == 3 && $col <= $pos    \
+        || $tr_type == 4 && $col >= $pos))  \
+        && printf " * " || printf "   "
+
+    [ $col -eq $[num -1] ] && echo
+done
+
+
+

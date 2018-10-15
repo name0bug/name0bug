@@ -1,0 +1,76 @@
+一、给root 用户设置密码，并用密码登录
+mysqladmin -uroot -p password abc      <-- 设置root 用户的密码为abc 
+mysql -uroot -pabc
+
+
+二、重置用户密码
+创建一个用户u1，设置其密码为123456
+grant select on test.* to u1@localhost identified by '123456';
+
+重置u1 的密码为abcdefg
+use mysql
+update user set password=password('abcdefg') where User='u1';
+flush privileges;
+
+
+三、重置root 用户的密码
+
+    1. 修改 /etc/my.cnf，在 [mysqld] 段落添加 skip-grant-tables=1
+    2. 重启服务器，即可免密码登录
+    3. 登录后，设置root用户的密码
+        update mysql.user set password=Password('abc') where user='root' and host='localhost';
+    4. 修改 /etc/my.cnf，在 [mysqld] 段落把 skip-grant-tables 设置为0
+    5. 重启服务器
+
+
+
+四、删除用户名为空的用户
+1. 尝试用一个不存在的用户名登录数据库，是否成功？
+2. 用root登录后，删除所有用户名为空的用户，再次用一个不存在的用户名登录，是否成功？
+3. 用root 用户执行命令flush privileges，再次用一个不存在的用户名登录，是否成功？
+
+
+
+
+五、添加/删除用户练习
+添加一个用户u1@10.1.1.1，不设密码
+create user u1@10.1.1.1;
+
+添加一个u2@10.1.1.2，密码设置为abc
+create user u2@10.1.1.2 identified by 'abc';
+
+把u1@10.1.1.1 删除
+drop user u1@10.1.1.1;
+
+
+
+
+
+六、权限练习
+以下练习中所涉及的用户都必须先手工创建，且都设置了密码。
+
+1. 允许用户it@localhost 创建和删除数据库it
+grant create,drop on it.* to it@localhost
+
+2. 允许用户finance@localhost 对finance 数据库做select, insert, update 操作，并能把这三种权限授予别的用户，除此之外，没有别的任何权限
+revoke all privileges, grant option from finance@localhost
+grant select,insert,update on finance.* to finance@localhost with grant option;
+
+3. 允许用户viewer@10.1.1.1 对finance 中的表y2014 进行select 操作
+grant select on finance.y2014 to viewer@10.1.1.1
+
+4. 允许用户assistant@10.1.2.3 对company 数据库中的emp 表中的ename, empno 字段进行select 操作，对deptno 字段进行select 和update 操作
+grant select (ename,empno,deptno), update (deptno) on company.emp to assistant@10.1.2.3
+
+5. 允许用户hr@10.1.2.4 对company 数据库中的emp 表中的salary 字段进行update 操作
+grant update (salary) on company.emp to hr@10.1.2.4
+
+6. 收回u1用户的所有权限，不管该用户来自哪个主机
+select user,host from mysql.user where user='u1';   <-- 列出所有的u1 用户，为了逐个删除
+revoke all privileges,grant option from u1@'xxx';
+revoke all privileges,grant option from u1@'yyy';
+revoke all privileges,grant option from u1@'zzz';
+
+7. 创建一个管理员用户，名叫admin，其权限和root 用户相同
+create user admin@localhost;
+grant all on *.* to admin@localhost with grant option;

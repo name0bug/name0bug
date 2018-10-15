@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# 判断第一个参数为空才会打印hello
+[ -z "$1" ] && echo hello
+[ "$1" = "" ] && echo hello
+[ "x$1" = "x" ] && echo hello
+
+
+num=${1-0}
+
+# [ "$num" -ge 10 -a "$num" -le 20 ] && echo "Yes"
+
+if [ "$num" -ge 10 ] && [ "$num" -le 20 ] ; then
+    echo "Yes"
+else
+    echo "No"
+fi
+
+# 这个是开了新进程去判断
+([ "$num" -ge 10 ] && [ "$num" -le 20 ])  && echo "Yes" || echo "No"
+
+
+# 会判断是不是数字 ((  ))
+(( "$num" >= 10 && "$num" <= 20 )) && echo "Yes" || echo "No"
+

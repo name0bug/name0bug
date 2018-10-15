@@ -1,0 +1,42 @@
+#!/bin/bash
+
+source libs
+
+# month=(0 31 28 31 30 31 30 31 31 30 31 30 31)
+
+year=${YEAR-2018}
+
+days=$(count_year_days 1900 $year)
+let days+=13
+
+for m in {1..12} ; do
+    # case "$m" in
+        # 2|4|6|8|9|11)
+             # let days+=31
+            # ;;
+        # 5|7|10|12)
+             # let days+=30
+            # ;;
+        # 3)
+            # isYear $year && let days+=29 || let days+=28
+            # ;;
+        # 1)
+            # ;;
+    # esac
+
+    #--------------------------------------------------------------------------
+
+    # mday=${month[$[m - 1]]}
+    # let days+=mday
+    # if [ $m -eq 3 ] ; then
+        # isYear "$year" && let days++
+    # fi
+
+    #--------------------------------------------------------------------------
+
+    mday=$(count_month_days $year $m)
+    (((days + mday) % 7 == 5)) \
+        && printf "%d 年 %d 月 13 日是黑色星期五!\n" $year $m
+done
+
+

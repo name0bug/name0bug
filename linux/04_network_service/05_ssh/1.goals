@@ -1,0 +1,15 @@
+# 什么是ssh (telnet, secure shell，基于公钥加密系统的安全远程shell)
+# 安装，启动 (yum install openssh-server)
+# 配置 (/etc/ssh/sshd_config)
+# 登录
+# 运行远程命令
+# 在ssh的基础之上安全地传输文件
+    # scp
+    # sftp
+    # rsync
+    # 管道
+# 公钥登录
+# ssh安全 (网络，用户，认证，命令，服务器身份）
+    # 智能卡 + 公钥
+
+# * 自动化控制ssh (expect, python+pexpect, python+paramiko)

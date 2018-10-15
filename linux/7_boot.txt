@@ -1,0 +1,560 @@
+启动管理
+    mbr里的启动程序 - grub -> bootloader程序(启动内核并且传参)
+
+    centos6 -> grub
+    ubuntu  -> grub2
+    windows -> grub4dos
+
+    grub配置文件: /boot/grub/grub.cfg
+
+    grub识别分区
+        hd0             代表第一块硬盘
+        hd0,msdos1      代表第一块硬盘的第一个分区
+        hd1,gpt2        代表第二块硬盘的第二个分区
+
+        第一块硬盘的第三个分区中boot目录的vmlinuz文件的grub路径
+            (hd0,msdos3)/boot/vmlinuz
+
+    grub命令
+        set     设置grub环境变量
+
+            设置菜单等待显示风格(hidden代表隐藏)
+                set timeout_style=menu
+
+            设置菜单等待时间 (秒)
+                set timeout=30
+
+            设置grub环境的根分区
+                set root='hd0,msdos1'
+
+                如果设置了root环境变量, 访问第一块硬盘第一个分区boot目录下vmlinuz文件的路径
+                    /boot/vmlinuz
+
+            设置grub默认进入操作系统条目
+                set default=2
+
+        menuentry   创建菜单项
+            menuentry 'My Menu Options' {
+                ...
+            }
+
+        linux       启动哪个内核
+        initrd      启动哪个临时文件系统
+        boot        启动系统 (grub命令行)
+
+
+    启动ubuntu系统的菜单的grub配置内容
+        menuentry 'Kyo Ubuntu16.04.4' {
+		    set root='hd0,msdos1'
+            linux /boot/vmlinuz-4.4.0-116-generic root=/dev/sda1
+            initrd /boot/initrd.img-4.4.0-116-generic
+        }
+
+
+    grub配置文件错误或丢失的效果, 开机进入提示 grub> 命令行:
+
+    set root=(hd0,1)
+    linux /boot/vmlinuz-4.4.0-130-generic root=/dev/sda1
+        输入linux /boot/vmlinuz-再按TAB补全文件
+    initrd /boot/initrd.img-4.4.0-130-generic
+    boot
+
+    grub模块目录丢失的效果, 开机进入提示 grub-rescue> 命令行:
+        前提: 已知grub目录在第一块硬盘的第一个分区下
+
+    set prefix=(hd0,1)/grub
+        设置grub程序根目录(模块根目录)
+    set root=(hd0,1)
+        设置grub环境的默认根分区, 设置/对应位置
+    insmod normal
+        导入normal核心模块(菜单选项代码)
+    normal
+        运行normal模块代码, 运行成功后进入grub菜单
+
+-------------------------------------------------------------------------------
+ubuntu系统上硬盘安装centos7 (依赖Lvm分区方案)
+    前提工作:
+        sudo mkdir -p /disk/data
+        sudo chown $USER:$USER -R /disk
+        sudo mount /dev/sda6 /disk/data
+        sudo chown $USER:$USER /disk/data -R
+
+        wget http://3.3.3.1/iso/CentOS-7-x86_64-DVD-1804.iso -O /disk/data/centos7.iso
+            或
+        wget http://3.3.3.9/iso/centos7.iso -O /disk/data/centos7.iso
+
+        mount -o loop,ro /disk/data/centos7.iso /mnt
+        cp -r /mnt/images /disk/data/
+        cp /mnt/isolinux/{vmlinuz,initrd.img} /disk/data/
+
+    如果在grub命令行输入命令则不需要修改grub配置文件
+        grub命令行
+            grub> linux (hd0,6)/vmlinuz linux repo=hd:/dev/sda6:/
+            grub> initrd (hd0,6)/initrd.img
+            grub> boot
+
+        /boot/grub/grub.cfg 追加内容:
+            menuentry '----- CentOS 7 1804 Install -----' {
+                linux (hd0,6)/vmlinuz linux repo=hd:/dev/sda6:/
+                initrd (hd0,6)/initrd.img
+            }
+
+    重启电脑进入grub菜单选择CentOS 7 Install菜单项按回车
+
+    进入CentOS7安装界面会让用户选择以什么方式安装(http ftp nfs cdrom hard)
+        选择硬盘安装 -> 选择镜像文件所在分区(/dev/sda6)
+
+        注意: 选择安装的分区
+
+-------------------------------------------------------------------------------
+ubuntu系统上硬盘安装mint19
+    前提工作:
+        sudo mount /dev/sda6 /disk/data
+        sudo chown $USER:$USER /disk/data -R
+
+        wget http://3.3.3.1/iso/linuxmint-19-cinnamon-64bit.iso -O /disk/data/mint19.iso
+            或
+        wget http://3.3.3.9/iso/mint19.iso -O /disk/data/mint19.iso
+
+        mount -o loop,ro /disk/data/mint19.iso /mnt
+
+    重启电脑进入grub命令行 (grub菜单界面按c进入grub命令行)
+        set root=(hd0,6)
+        loopback loop /mint19.iso
+        set root=(loop)
+        linux /casper/vmlinuz boot=capser iso-scan/filename=/mint19.iso --
+        initrd /casper/initrd.lz
+        boot
+
+    进入mint19的试用系统中
+        按ctrl + alt + t 打开终端输入: sudo umount -l /isodevice
+        点击桌面安装程序， 点击下一步, 其中进入分区选择
+            boot分区 --> /dev/sda3          不要格式化
+            home分区 --> /dev/up/home       不要格式化
+            mint根分区 --> /dev/up/mint
+            swap分区 --> /dev/up/swap
+
+-------------------------------------------------------------------------------
+ubuntu系统上硬盘安装windows 7
+    前提:
+        自己下载win7的ghost.gho文件, 复制到/dev/sda7(D盘)分区中
+        把ghost.img和memdisk文件复制到/dev/sda6分区
+
+        sudo mount /dev/sda6 /disk/data
+        sudo mount 3.3.3.9:/kyo /mnt
+        cp /mnt/tools/{ghost.img,memdisk} /disk/data/
+
+    重启电脑进入grub命令行
+        set root=(hd0,6)
+        linux16 /memdisk c=2000 h=4 s=36 floppy
+        initrd16 /ghost.img
+        boot
+
+        进入ghost程序将win7的gho文件还原到C盘(/dev/sda2)
+
+    ghost完成之后再进入grub命令行
+        set root=(hd0,2)
+        chainloader +1
+        boot
+
+-------------------------------------------------------------------------------
+/boot       存储启动相关文件
+    建议/boot目录对应独立分区(必须是主分区 并且是ext2格式)
+
+    grub
+        grub.cfg        配置文件
+            丢失进入grub> 命令行
+
+        i386-pc         grub的模块目录
+            丢失进入grub rescue> 命令行
+
+
+    vmlinuz-4.4.0-116-generic       内核文件
+    initrd.img-4.4.0-116-generic    临时文件系统
+
+-------------------------------------------------------------------------------
+修复grub引导程序(BIOS + MBR)
+
+    重启grub程序, 会自动将grub引导程序写入mbr并且固定在/boot目录下生成grub相关文件
+
+        grub-install /dev/sda
+
+    ubuntu grub.cfg的自动生成
+
+        update-grub
+
+    问题: 根分区完整的前提下, 只是引导程序或相关文件丢失导致引导不了系统
+
+        借助第三方linux系统来进行修复 (U盘 网络 光盘)
+
+        首先进入第三方设备提供的linux系统:
+
+            1. 挂载修复系统的根分区
+                mount /dev/sda1 /mnt
+
+            2. 挂载boot分区到/mnt/boot目录下
+                mount /dev/sda3 /mnt/boot/
+
+            3. 将内核相关目录挂载(proc sys dev tmp)
+                mount -o bind /proc /mnt/proc/
+                mount -o bind /sys /mnt/sys/
+                mount -o bind /dev /mnt/dev/
+                mount -o bind /tmp /mnt/tmp/
+
+            4. 切换到ubuntu系统(进入ubuntu的系统)
+                chroot /mnt
+
+            5. 重装grub
+                grub-install /dev/sda
+
+-------------------------------------------------------------------------------
+Grub引导其它系统
+    前提: 将mint centos ubuntu的启动文件全部统一放在boot分区(/dev/sda3)
+
+    grub        ubuntu/mintw
+        (hd0,3)/grub/grub.cfg
+
+    grub2       centos7
+        (hd0,3)/grub2/grub.cfg
+
+    centos7:
+        initramfs-3.10.0-862.el7.x86_64.img
+        vmlinuz-3.10.0-862.el7.x86_64
+
+    mint:
+        initrd.img-4.15.0-20-generic
+        vmlinuz-4.15.0-20-generic
+
+    ubuntu:
+        initrd.img-4.4.0-116-generic
+        vmlinuz-4.4.0-116-generic
+
+    -----------------------------------------------------------------------
+    grub命令行启动ubuntu:
+        linux (hd0,3)/vmlinuz-4.4.0-116-generic root=/dev/sda1 quiet splash
+        initrd (hd0,3)/initrd.img-4.4.0-116-generic
+        boot
+
+    grub命令行启动mint:
+        linux (hd0,3)/vmlinuz-4.15.0-20-generic root=/dev/mapper/up-mint quiet splash
+        initrd (hd0,3)/initrd.img-4.15.0-20-generic
+        boot
+
+    grub命令行启动centos:
+        linux (hd0,3)/vmlinuz-3.10.0-862.el7.x86_64 root=/dev/mapper/up-centos quiet splash
+        initrd (hd0,3)/initramfs-3.10.0-862.el7.x86_64.img
+        boot
+
+    --------------------------------------------------------------------------
+	grub.cfg配置菜单
+		#  kyo grub config
+
+    	insmod all_video
+	  	insmod gfxterm
+	  	insmod gettext
+		insmod lvm
+		insmod part_msdos
+		insmod ext2
+		insmod exfat
+		insmod iso9660
+		insmod loopback
+		insmod jpeg
+		insmod png
+		insmod cryptodisk
+
+	 	set gfxmode=auto
+	  	set locale_dir=$prefix/locale
+	  	set lang=zh_CN
+        set timeout_style=menu
+        set timeout=5
+        set default=0
+
+		background_image /boot/grub/bg.jpG
+
+        menuentry 'Ubuntu 16.04' {
+            linux (hd0,3)/vmlinuz-4.4.0-116-generic root=/dev/sda1 quiet splash
+            initrd (hd0,3)/initrd.img-4.4.0-116-generic
+        }
+
+        menuentry 'Mint 19' {
+            linux (hd0,3)/vmlinuz-4.15.0-20-generic root=/dev/mapper/up-mint quiet splash
+            initrd (hd0,3)/initrd.img-4.15.0-20-generic
+        }
+
+        menuentry 'CentOS 7' {
+            linux (hd0,3)/vmlinuz-3.10.0-862.el7.x86_64 root=/dev/mapper/up-centos quiet splash
+            initrd (hd0,3)/initramfs-3.10.0-862.el7.x86_64.img
+        }
+
+        menuentry 'Window 7' {
+            set root=(hd0,2)
+            chainloader +1
+        }
+
+        menuentry 'CentOS 7 Install' {
+            set root=(hd0,6)
+            linux /vmlinuz linux repo=hd:/dev/sda6:/
+            initrd /initrd.img
+        }
+
+        menuentry 'Mint 19 Install' {
+            set root=(hd0,6)
+            loopback loop /mint19.iso
+            set root=(loop)
+            linux /casper/vmlinuz boot=casper iso-scan/filename=/mint19.iso quiet splash --
+            initrd /initrd.img
+        }
+
+        menuentry 'Ghost' {
+            set root=(hd0,6)
+            linux16 /memdisk c=2000 h=4 s=36 floppy
+            initrd /ghost.img
+        }
+
+		menuentry '重启' {
+			reboot
+		}
+
+		menuentry '关机' {
+			halt --no-apm
+		}
+
+-------------------------------------------------------------------------------
+启动流程
+
+	通电 -> 执行主板内置程序(BIOS/UEFI)
+		 -> Grub(/boot/grub/grub.cfg)
+ 		 -> /boot/vmlinuz* (Linux 核心程序) 挂载临时文件系统(initrd*)
+         -> 挂载根分区(/etc/fstab)
+         -> systemd(启动第一个进程)
+            -> /etc/init/*.conf (运行所有配置文件)
+                -> rc-sysinit.conf      定义操作系统运行级别
+                -> rcS.conf
+                -> rc.conf (开机运行的服务 /etc/rc*.d/*)
+                -> lightdm.conf  图形界面
+                -> rc.local      执行的最后一个脚本(用于用户自定义执行的脚本)
+            -> 用户登录
+                -> /etc/profile         任何用户登录就会执行的脚本
+                    -> /etc/profile.d/*.sh
+                -> /etc/bash.bashrc     终端启动全局配置文件
+
+                -> ~/.profile           用户登录 执行登录用户相关配置, 用户登录就会执行
+                -> ~/.bashrc            用户终端配置, 用户打开终端就会执行
+
+                -> ~/.bash.logout       用户登出执行脚本
+
+    图形界面的自动启动配置文件
+        /etc/xdg/autostart/*.desktop
+            [Desktop Entry]
+            Type=Application
+            Name=KyoTerminal
+            Comment=kyo autostart terminal
+            Icon=preferences-desktop-screensaver
+            Exec=gnome-terminal
+
+        必须给可执行权限，否则没有作用
+
+        /etc/X11/xinit/xinitrc.d/*.sh
+
+    systemd 启动配置目录 /etc/init/
+    服务的启动程序 /etc/init.d/
+
+    GNU/Linux操作系统初始化程序:
+        SysVinit    rhel5           过时
+            init (1)
+        upstart     ubuntu老版本    过时
+        systemd     主流
+
+    系统运行级别
+        获取当前操作系统的运行级别: runlevel
+
+        0       关机
+        1       单用户模式
+        2       无网络的文本模式
+        3       有网络的文本模式
+        4       保留
+        5       图形模式
+        6       重启
+
+    单用户模式进入方法 (用于修复系统)
+        开机长按shift键, 弹出grub菜单, 选择ubuntu条目按e进行编辑
+            linux	/boot/vmlinuz-4.4.0-116-generic root=UUID=db6a4392-ccb0-41af-863f-4de76cad1c0a ro  quiet splash $vt_handoff
+
+                修改
+
+            linux	/boot/vmlinuz-4.4.0-116-generic root=UUID=db6a4392-ccb0-41af-863f-4de76cad1c0a rw single init=/bin/bash
+
+-------------------------------------------------------------------------------
+服务管理
+    服务: 开机自动启动守护进程
+    服务管理脚本: /etc/init.d/*
+
+    开机是否启动
+        服务与运行级别相对应 /etc/rc*.d/
+        对/etc/rc*.d目录下的文件操作即可操作开机是否启动
+        rc*.d目录下的文件名第一个字母代表开机是否启动
+            K       开机不启动
+            S       开机启动
+            数字    启动顺序
+
+        设置开机是否启动只需要修改对应运行级别目录的文件名
+
+        centos6: chkconfig
+            chkconfig --level 5 服务名 off
+            chkconfig --level 5 服务名 on
+
+        centos7: systemctl
+            systemctl disable 服务名[.service]
+            systemctl enable 服务名[.service]
+
+        ubuntu: sysv-rc-conf
+
+    实时开关服务
+        启动服务
+            service apache2 start
+                ubuntu下service命令最终调用systemctl命令
+
+            systemctl start apache2.service
+                systemctl最终调用/etc/init.d/apache2脚本
+
+            在不完全理解apache2脚本提前下，不建议使用以下方法
+
+                /etc/init.d/apache2 start
+
+        关闭服务
+            systemctl stop apache2.service
+
+        重启服务
+            systemctl restart apache2.service
+
+        查看服务状态
+            systemctl status apache2.service
+
+        重新加载服务配置
+            systemctl reload apache2.service
+
+-------------------------------------------------------------------------------
+定时任务/计划任务
+
+    常用的定时任务的服务: at/atd crontab/cron anacron
+
+    at
+        定时执行任务, 如果设定时间点过了，任务失效, 任务只是一次性
+
+        at保证运行正常必须保证服务正常运行
+
+            systemctl restart atd.service
+
+        at 10:00 082218     定义2018年8月2号10点执行
+            at> echo $(date +"%F %T") >> /tmp/tmpfile
+            at> 结束(ctrl + d)
+
+        at -l               查看任务列表
+
+        at -c 3             查看id为3的任务的详情
+
+        at -d 3             删除id为3的任务
+
+        at -f test.sh 10:00 082218   定义脚本执行的时间
+
+        at -f test.sh now +1 minutes    定义一分钟后执行脚本
+
+        at -f test.sh now +2 hours      定义2个小时后执行脚本
+
+        ...
+
+        权限控制
+            /etc/at.deny        里面存储拒绝运行at服务用户名单
+                允许所有， 拒绝此文件用户
+
+            /etc/at.allow       里面存储允许运行at服务用户名单
+                拒绝所有，允许此文件用户
+
+            at.allow 和 at.deny 不能同时存在， 同时存在at.allow优先级高
+
+-------------------------------------------------------------------------------
+crontab
+
+    周期性时间计划任务, 时间过了也不执行, 到下一个周期再执行
+
+    anacron服务用于补充crontab服务, 保证时间过了的任务也执行
+
+    服务控制
+        systemctl restart cron.service
+
+    crontab周期时间配置
+    # m h  dom mon dow   command
+    一行为一条周期任务
+    每一行以空格为分隔符分隔六个字段
+
+    第一字段    分钟 0-59
+    第二字段    小时 0-23
+    第三字段    日   具体看月份 (1-31)
+    第四字段    月   1-12
+    第五字段    周   0-7 (0和7都代表星期天)
+    第六字段    周期要执行的命令
+
+    时间格式
+
+        *       代表每分钟， 每小时，每天， 每月，每周
+
+        ,       代表分隔时间
+            3,5,8-10
+
+        -       代表时间段
+            3-10
+
+        */n     代表每隔n个单位
+
+    解决没有使用vi打开crontab问题:
+
+        export EDITOR=vi
+
+    日与周的关系
+        两个其中有一个为数字，则以此数字为准
+        两个都为数字为或的关系
+        两个都为*, 代表每天
+
+
+    每年的7月6号5点3分或星期天的5点3分执行
+        3 5 6 7 0 /tmp/test/test.sh
+
+    每分钟执行
+        * * * * * /tmp/test/test.sh
+
+    每隔两分钟执行
+        */2 * * * * /tmp/test/test.sh
+
+    每个小时的前30分钟执行任务
+        0-29 * * * *
+
+    每个月的15号每三个小时 每两分钟执行任务
+        */2 */3 15 * *
+
+    每个月的15号每三个小时 每两分钟执行任务 或者 星期三每三个小时 每两分钟执行任务
+        */2 */3 15 * 3
+
+    每天的1 3 7 8 13 21点05分执行任务
+        5 1,3,7-8,13,21 * * *
+
+    每个月的5号和20号的4点到13点的15分执行
+        15 4-13 5,20 * *
+
+    每个星期三的每两个小时
+        0 */2 * * 3
+
+    每年的5到8月的星期三和星期天的4点5分执行
+        5 4 * 5-8 7,3
+
+    crontab 命令
+        crontab -e          编辑当前登录用户的计划任务
+        crontab -l          列出当前用户的cron计划任务
+        crontab -r          删除当前用户的所有计划任务
+        crontab -i          删除操作会询问
+
+    crontab全局配置 /etc/crontab
+        与crontab -e 打开文件格式类似， 只是多了用户字段
+
+        SEHLL 环境变量指定定时任务执行解析器
+        PATH 环境变量指定定时任务PATH路径
+

@@ -1,0 +1,148 @@
+给root 用户设置密码
+
+[czl@mob mysql]$ mysqladmin -uroot password abc         <-- 设置密码为abc 
+[czl@mob mysql]$ mysqladmin -uroot -pabc password 123   <-- 再次修改密码时，须验证旧密码
+[czl@mob mysql]$ mysql -uroot -p123                     <-- 用密码登录
+Welcome to the MySQL monitor.  Commands end with ; or \g. 
+Your MySQL connection id is 24
+Server version: 5.1.61 Source distribution
+
+Copyright (c) 2000, 2011, Oracle and/or its affiliates. All rights reserved.
+
+Oracle is a registered trademark of Oracle Corporation and/or its 
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+mysql>
+
+
+
+
+重置用户的密码
+遗失密码有两种情况，第一种是遗失普通用户的密码，第二种是遗失root 用户的密码，两种情况的处理方法不一样。
+
+一、重置普通用户的密码
+mysql> use mysql
+Reading table information for completion of table and column names
+You can turn off this feature to get a quicker startup with -A
+
+Database changed
+mysql> update user set Password=password('111') where User='root' and Host='localhost';
+Query OK, 1 row affected (0.00 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+mysql> flush privileges;
+Query OK, 0 rows affected (0.00 sec)
+
+
+二、重置root 用户的密码
+1. 在配置文件中的[mysqld] 段落添加一行 skip-grant-tables=1
+配置文件的默认位置是/etc/my.cnf
+[mysqld]
+......
+skip-grant-tables=1
+......
+
+2. 重启mysqld 服务
+3. 使用用户root 登录服务器，这个时候是不需要密码的
+4. 按照重置普通用户密码的方法，重置root 用户的密码
+5. 删除第一步所添加的行
+6. 重启mysqld 服务
+
+
+
+
+
+
+
+用户管理和权限管理
+
+添加用户
+create user u1@localhost identified by 'abc';   <-- 设置了用户密码
+create user u1@localhost;                       <-- 没有设置密码，用户可以用空密码登录
+create user u1@172.16.1.1;
+
+删除用户
+drop user u1@localhost;
+
+修改用户密码
+update mysql.user set password=password('abc') where user='u1' and host='localhost';
+flush privileges;
+
+给用户授权
+grant select,update on company.emp to u2@localhost;
+grant delete on company.emp to u3@localhost;
+
+撤回用户的权限
+revoke select,update on company.emp from u2@localhost;
+revoke delete on company.emp from u3@localhost;
+
+
+
+
+
+
+
+关于mysql 的权限
+
+权限粒度从字段级别到全局级别，由小到大分别是：字段，表，数据库，全局。高级别的权限包含了低级别的权限，也就是说，如果一个用户拥有对数据库的SELECT 权限，那么他就拥有对该数据库下所有表的所有字段的SELECT 权限。全局权限、数据库权限、表权限、字段权限，这几种权限存放在不同的系统表中，撤回一个权限不会影响别的权限。有一种特别的权限叫做执行权限，是用来执行用户定义的函数，或者存储过程的权限，不同于常见的select, update, delete, insert 等权限。各种权限存放的位置如下：
+1. 全局权限     --- mysql.user
+2. 数据库权限   --- mysql.db
+3. 表权限       --- mysql.tables_priv
+4. 字段权限     --- mysql.columns_priv, mysql.tables_priv （字段权限受两个表的影响）
+5. 执行权限     --- mysql.procs_priv, mysql.db （执行权限受两个表的影响）
+
+
+
+授权举例：
+
+1. 对用户u1@localhost 做全局的授权/撤回授权
+grant insert,delete,update,select on *.* to u1@localhost
+revoke insert,delete,update,select on *.* from u1@localhost
+
+
+2. 对指定的数据库进行授权/撤回权限，当授权时使用了with grant option 时，该用户可以把其得到的权限授予他人
+grant select,insert on company.* to u1@localhost;
+grant select,insert on company.* to u1@localhost with grant option;
+revoke select,insert on company.* from u1@localhost;
+
+
+3. 对指定的表进行授权/撤回权限
+grant all on company.emp to u1@localhost;
+revoke all on company.emp from u1@localhost;
+
+
+4. 对指定的字段进行授权/撤回权限
+grant select (empno,ename,salary) on company.emp to u1@localhost;
+grant select (empno,ename,salary), update (salary) on company.emp to u1@localhost, u2@localhost;
+revoke select (empno,ename,salary) on company.emp from u1@localhost;
+revoke select (empno,ename,salary), update (salary) on company.emp from u1@localhost, u2@localhost;
+
+5. 赋予用户对存储过程的执行权限
+grant execute on company.* to u1@localhost;             <-- 授予权限执行数据库company 中的所有存储过程和函数
+grant execute on procedure company.p1 to u1@localhost;  <-- 授予权限执行一个存储过程
+grant execute on function company.f1 to u1@localhost;   <-- 授予权限执行一个函数
+
+6. 赋予某个用户所有权限，撤回某个用户的所有权限
+grant all privileges on *.* to admin@localhost with grant option;
+revoke all privileges, grant option from u1@localhost;
+
+7. 查看某个用户的权限
+show grants for u1@10.1.2.3;
+
+
+
+列出所有登录到系统上的用户，并终止某些连接
+mysql> show processlist;
++----+------------+-----------------+-------+---------+------+-------+------------------+
+| Id | User       | Host            | db    | Command | Time | State | Info             |
++----+------------+-----------------+-------+---------+------+-------+------------------+
+|  4 | root       | localhost       | mysql | Query   |    0 | NULL  | show processlist |
+| 15 | longminfan | localhost:38314 | NULL  | Sleep   |   85 |       | NULL             |
++----+------------+-----------------+-------+---------+------+-------+------------------+
+2 rows in set (0.00 sec)
+
+mysql> kill connection 15;          <-- 15 就是连接的ID
+Query OK, 0 rows affected (0.00 sec)

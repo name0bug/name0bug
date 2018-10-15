@@ -1,0 +1,47 @@
+安装
+
+    yum install openssh-server      <-- 安装
+    systemctl enable sshd           <-- 设置为开机启动
+    systemctl start sshd            <-- 启动服务
+
+
+
+查看服务器公钥的指纹
+
+    ssh-keygen -lf /etc/ssh/ssh_host_ecdsa_key.pub
+
+
+常用配置
+
+Port 22                         <-- 设置服务器监听的端口
+PermitRootLogin yes             <-- 是否允许root用户登录
+PasswordAuthentication yes      <-- 是否允许用密码来认证
+X11Forwarding yes               <-- 是否转发图形
+
+更多配置想的信息，请查找文档：man 5 sshd_config
+
+
+
+登录命令范例
+
+1. ssh root@3.3.3.8                 <-- 指定了用户名，使用默认端口22
+2. ssh 3.3.3.8                      <-- 不指定用户名，则使用客户端当前用户名
+3. ssh -l root -p 2222 3.3.3.8      <-- 指定名字和端口号
+
+    -l      <-- 指定登录所用的用户名
+    -p      <-- 连接到服务器的哪个端口，默认是22
+
+
+通过ssh执行远程命令
+
+1. 在远程机执行命令uptime，标准输出会传送到本地
+ssh root@3.3.3.8 uptime
+
+2. 远程命令可以有管道
+ssh root@3.3.3.8 "w | wc -l"
+
+3. 把远程的文件直接读取出来，传到本地，保存到本地文件中
+ssh root@3.3.3.8 "cat /etc/passwd" > /tmp/passwd
+
+4. 把本地数据作为标准输入传给远程的程序
+cat /etc/passwd | ssh root@3.3.3.8 "wc -l"

@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# if [ $1 = "start" -o $1 = "START" -o $1 = "s" ] ; then
+    # echo "正在启动..."
+# elif [ $1 = "stop" ]; then
+    # echo "正在关闭..."
+    # echo "已经关闭..."
+# elif [ $1 = "restart" ]; then
+    # echo "正在重启...."
+# else
+    # echo "错误: 不支持的选项!"
+# fi
+
+
+# case "$1" in
+    # start|s|START) echo "正在启动...";;
+    # stop|q|STOP)
+        # echo "正在关闭..."
+        # echo "已经关闭..."
+        # ;;
+    # restart|r|RESTART)
+        # echo "正在重启...."
+        # ;;
+    # *)
+        # echo "错误: 不支持的选项!"
+        # ;;
+# esac
+
+while true ; do
+    echo "1. 九九乘法表"
+    echo "2. 猜数字游戏"
+    echo "3. 判断闰年"
+    echo "4. 买鸡"
+    echo "5. 黑色星期五"
+    echo "6. 打印直角三角形"
+    read -p "请输入[1 - 6, 0: 退出]: " input
+
+    case "$input" in
+        0) break;;
+        1) echo "正在执行九九乘法表..." ;;
+        2) echo "猜数字游戏..." ;;
+        3) echo "年..." ;;
+        4) echo "买鸡...";;
+        5) echo "黑色星期五...";;
+        6) echo "三角形";;
+        *) echo "非法操作!!";;
+    esac
+
+    read -p "是否继续(Y/n): " input
+    [ $input != "Y" -a $input != "y" ] && break
+
+done

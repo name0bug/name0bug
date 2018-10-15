@@ -1,0 +1,35 @@
+# 能够通过yum 安装mysql 服务器
+# 能够用mysql 客户端通过socket 登录本机的mysql 服务器
+# 能够用mysql 客户端通过网络登录mysql 服务器 (-h, -u, -p)
+# 了解mysql 的数据目录结构
+# 了解数据库的逻辑结构：数据库，表，记录，字段，并能在mysql 中查询相关的信息
+# 能够列出所有的库，在多个数据库之间切换，查询当前正在使用的数据库，列出当前库的所有表，查询表的结构，查询表的数据，查询当前登录的用户
+# 了解mysql 命令的结构（以分号(;) 或者 \G 结束则执行命令, 以\c 结束则取消命令）
+# 能够从mysql 的官方网站下载mysql 服务器的安装包和文档
+# 能够通过mysql 客户端和官方文档查找帮助信息
+
+SQL: Structured Query Language
+--------------------------------------------
+# 能够创建数据库 (create database)
+# 能够查看数据库的创建信息 (show create database)
+# 能够删除数据库 (drop database)
+# 了解MYISAM 和InnoDB 存储引擎
+# 了解mysql 常用的数据类型，并能够获取相关帮助信息 (help contents from the server, html documentation)
+# 能够创建表并为表指定数据库引擎 (create table ... engine=xxx)
+# 能够查看创建表的信息 (show create table)
+# 能够删除表 (drop table)
+# 能够给表改名 (rename table)
+# 能够给已经存在的表增加字段 (alter table ... add column)
+# 能够删除字段 (alter table ... drop column)
+# 能够修改字段的名字和数据类型 (alter table ... change column)
+# 能够复制一个表 (create table xxx as select * from yyy)
+# 能够往表中插入一行数据或者多行数据 (insert)
+# 能够查询表中的数据 (select)
+# 能够修改表中的数据 (update)
+# 能够删除表中的数据 (delete)
+# 能够对查询结果排序 (order by) 
+# 能够查询一组数据的信息 (group by)
+
+其它
+--------------------------------------------
+# phpmyadmin 的安装与使用（可选）

@@ -1,0 +1,97 @@
+使用虚拟机做本课的两个实验时，常见的问题：
+
+1. 局域网里面出现多个 DHCP 服务器，比如vmware 里面没有把vmnet1 网段的dhcp 服务关闭
+   解决方法：使用vmware 的Virtuan Network Editor 来设置vmnet1 的网段，关闭该网段的DHCP 服务
+
+2. NetworkManager 服务干扰
+   解决方法：
+   chkconfig --level 2345 NetworkManager off
+   service NetworkManager stop
+
+3. 物理机上的vmnet1 的IP自动变化，导致该IP 与DHCP 服务器的配置文件不相符
+   解决方法：使用vmware 的Virtuan Network Editor 来设置vmnet1 的网段，这样vmnet1 的IP 就会自动设置好了
+
+
+
+TCP/IP 是互联网(Internet)的基础
+
+TCP/IP 分层结构
+
+4. Application 应用层: dhcp, http, ftp, dns, nfs
+3. Transport 传输层: tcp, udp
+2. Internet 互联网层: ip
+1. Physical 物理层: wifi, 802.11g/b/n
+
+
+
+ip地址配置命令
+
+ip命令支持缩写，以下范例中，l 表示 link, a 表示 address, r 表示route
+
+ip l                                    <-- 查看网卡
+ip a s                                  <-- 查看ip
+ip a add 3.3.3.11/24 dev enp0s25        <-- 给网卡添加ip
+ip a del 3.3.3.11/24 dev enp0s25        <-- 从网卡上删除ip
+ip l set enp0s25 up                     <-- 启用网卡
+ip l set enp0s25 down                   <-- 停用网卡
+ip r add default via 3.3.3.1            <-- 添加默认路由
+ip r del default                        <-- 删除默认路由
+ip r change default via 3.3.3.1         <-- 修改默认路由
+
+
+
+Linux下网桥的设置
+
+brctl show                  <-- 列出所有的网桥
+brctl addbr br0             <-- 添加网桥
+brctl delbr br0             <-- 删除网桥
+brctl addif br0 enp0s25     <-- 把网卡加入网桥中
+brctl delif br0 enp0s25     <-- 从网桥中删除网卡
+
+注意：一个网卡只能属于一个网桥
+这里所使用的网桥将会被用于kvm虚拟机，达到允许虚拟机的网络和物理网连接成一个大的局域网。
+
+
+在Linux系统里面创建了一个桥，然后把网卡（假设系统上只有一个网卡）加入桥中，然后后续所有的联网操作都是通过这个网桥，可以这样想象：这个网桥就相当于之前的那个网卡。把网卡加入桥之后，应该给桥设置ip地址。
+
+操作范例：
+
+假设之前系统中没有网桥，系统中有一个网卡，名字为enp0s25，ip为3.3.3.11/24，默认网关为3.3.3.1，那么，给系统创建桥，使得系统通过桥来上网，配置的参考步骤如下：
+
+1. 删除原来网看上的ip地址
+
+    ip a del 3.3.3.11/24 dev enp0s25
+
+2. 创建桥，br0这个名字也可以随意选择
+
+    brctl addbr br0
+
+3. 把之前的网卡加入桥中
+
+    brctl addif br0 enp0s25
+
+4. 给桥设置ip地址，并启用，根据需要设置默认网关
+
+    ip a add 3.3.3.11/24 dev br0
+    ip l set br0 up                 <-- 这一步可能是不需要
+    ip r add default via 3.3.3.1
+
+
+
+
+KVM虚拟机的安装和配置
+
+1. 确认CPU支持虚拟化
+
+    grep vmx /proc/cpuinfo      <-- Intel CPU
+    grep svm /proc/cpuinfo      <-- AMD CPU
+
+2. 确保文件 /dev/kvm 存在，如果没有此文件，需要到电脑的BIOS中开启虚拟化功能
+
+3. 通过yum安装相关软件包
+
+    yum install qemu-kvm libvirt virt-install bridge-utils virt-manager libvirt-client
+
+4. 启动服务
+
+    systemctl start libvirtd

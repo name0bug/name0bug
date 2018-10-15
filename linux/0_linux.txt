@@ -1,0 +1,635 @@
+云计算 大数据 虚拟化 自动化课程
+
+操作系统学习流程:
+    图形基本操作(终端 网页 输入法)
+    终端的配置使用
+    基本命令的熟悉(文件系统基本操作)
+    用户管理和权限
+    磁盘管理
+    网络基本配置(网络故障排查)
+    软件管理
+    启动过程(系统引导 服务 程序自启)
+    服务管理
+    进程管理
+    SHELL脚本
+    计划任务
+    日志
+    基础服务
+        DHCP DNS NFS FTP HTTP TFTP SAMBA
+        PXE X-Window SSH RSYNC
+-------------------------------------------------------------------------------
+教学机IP: 3.3.3.9
+教学机共享目录: /kyo
+
+-------------------------------------------------------------------------------
+系统快捷键
+    alt + F2        运行命令
+
+        测试:
+            gnome-terminal      终端
+
+            gnome-tweak-tool    GNOME管理工具
+
+            nautilus            文件浏览器(类似我的电脑)
+
+            firefox             网页浏览器
+
+            reboot              重启
+
+            init 6              重启
+
+            init 0              关机
+
+    ctrl + alt + bs(退格键)     注销
+
+        gnome-tweak-tool -> 输入 -> 点击杀死X服务器... -> 打勾
+
+    ctrl + alt + 上下键         切换工作区
+
+    窗口操作快捷键
+
+        alt + F10           放大
+
+        alt + F8            修改窗口大小
+
+        alt + F7            移动窗口位置
+
+        alt + F4            关闭窗口
+
+        alt + Tab           切换窗口
+
+终端配置
+
+    打开终端：
+        1. alt + f2 / 输入gnome-terminal
+        2. 右击桌面空白点击打开终端
+        3. 应用程序菜单-> 系统工具 -> 终端
+
+    快捷键
+        ctrl + +/-              放大缩小终端内容
+        shift + ctrl + n        新建终端窗口
+        shift + ctrl + t        新建终端标签
+        alt + 1 ~ 9             切换终端标签
+        ctrl + d                关闭当前终端
+
+    右击终端 -> 配置文件 -> 配置文件首选项
+
+        配置字体: DejaVu Sans Mono Bold/14
+
+-------------------------------------------------------------------------------
+基本命令的熟悉(文件系统基本操作)
+
+命令    shell 命令解析器
+
+    当前SHELL环境变量:
+
+        echo $SHELL
+
+            /bin/bash
+
+命令分类
+    内部命令    集成于bash文件中
+    外部命令    独立于bash文件的文件
+
+    查看命令的类别
+
+        type 命令
+
+            内部命令会显示内嵌
+
+        which 命令
+
+            查看外部命令的路径
+
+-------------------------------------------------------------------------------
+命令的帮助
+    内部命令    help
+
+        help type
+
+    外部命令    man
+
+        man ls
+
+        man 1 ls        查看基本命令帮助
+        man 2 open      查看系统调用帮助
+        man 3 printf    查看标准库帮助
+        man 5 passwd    查看配置文件帮助
+        man 8 ifconfig  查看系统管理员命令帮助
+
+命令使用格式
+
+    命令名 [命令参数...]
+
+    命令名后一定有空格隔开(自动处理连续多个空格)
+    命令名空格后为命令的参数，扩展和指定命令的功能
+    参数之间也必须使用空格隔开
+    严格区分大小写
+    不建议使用中文
+
+    参数:
+        选项
+            每个参数第一个字符为-, 此参数为选项
+            扩展命令功能, 指定处理对象
+
+            长选项 --单词   可读性高
+
+                ls --all
+
+            短选项 -单字符  效率高
+
+                ls -a
+
+            选项值
+                --name=kyo
+                --name kyo
+                -n kyo
+
+        普通参数
+            为命令处理的对象(一般为文件或目录)
+
+-------------------------------------------------------------------------------
+GNU/Linux根分区目录结构
+    /       根目录, 文件系统的开始
+
+    bin         存储基本命令执行文件            *
+    sbin        存储系统管理命令执行文件        *
+    boot        存储启动相关文件(内核文件)      *
+    dev         存储设备文件                    *
+    etc         存储配置文件                    *
+    home        用户的默认家目录
+    root        root用户家目录
+    lib/lib64   存储库文件                      *
+    media       媒介默认自动挂载目录
+    mnt         用户自定义挂载目录
+    cdrom       DVD/VCD挂载目录
+
+    opt         第三方安装软件家目录
+    srv         服务家目录
+
+    proc        内核运行等状态目录              *
+    sys         内核驱动模型相关目录            *
+
+    run         程序运行时相关文件存储目录
+    tmp         程序运行临时使用的目录
+
+    usr         用户软件安装家目录              *
+    var         系统目录(日志 缓存 ...)         *
+
+-------------------------------------------------------------------------------
+路径
+    路径分隔符      / (第一个字符为/代表根)
+
+    工作路径        当前所在路径
+
+    绝对路径        从根开始的路径
+        /usr/src/linux/kernel
+
+    相对路径        相对工作路径的路径
+        ./linux/kernel
+        linux/kernel
+        ../share/xml
+
+
+    pwd     输出当前工作路径
+    cd      改变工作路径
+        /       根目录
+
+            回到根目录
+
+                cd /
+
+        .       代表当前路径
+
+            cd ./share/xml
+
+        ..      代表上一级路径
+
+            cd ..
+            cd ../usr/src
+
+        ~       代表当前登录用户的家目录
+
+            回到当前登录用户家目录
+                cd
+                cd ~
+
+        -       代表上一次所有路径
+
+-------------------------------------------------------------------------------
+
+文件操作命令
+    CURD操作
+
+    C 创建
+        mkdir
+
+    U 写
+        mv
+        cd
+
+    R 读
+        ls
+        pwd
+        cat
+        head
+        tail
+        less
+
+    D 删除
+        rm
+
+    CURD组合操作
+        cp      读/写(创建)
+        vim     读/写(创建 更新)
+        touch   创建/更新
+
+    vimtutor
+
+    管道/重定向
+
+-------------------------------------------------------------------------------
+
+mkdir
+
+    在当前目录下创建test目录
+        mkdir test
+
+    在指定路径下创建test目录
+        mkdir /home/kyo/test
+
+    创建目录树(路径出现不存在目录, 会自动创建)
+        mkdir -p /home/kyo/works/test
+
+    在不同路径创建多目录
+        mkdir test /home/kyo/works /tmp/kyo
+
+    创建10个有规律的目录(dir1 - dir10)
+        mkdir dir{1..10..1}
+        mkdir dir{a..z..1}
+                a..z..1
+                1..10..1
+                    第一个数字代表起始值
+                    第二个数字代表结束值
+                    第三个数字代表步长
+
+
+    不切换路径的情况下在某个路径下创建多个目录
+        mkdir /home/kyo/test/{a,b,c,d}
+
+    创建/1/2/3/4/5/6/7.../100目录树
+        mkdir -p /home/kyo/test/$(echo {1..100} | tr " " '/')
+
+-------------------------------------------------------------------------------
+touch
+    更新文件的时间(访问时间/修改时间)
+
+    文件存在更新文件的时间，文件不存在创建文件
+
+    应用场景一般与编译代码相关
+
+-------------------------------------------------------------------------------
+mv
+    格式: mv 源文件路径... 目标路径
+
+    重命名
+        mv file newfile
+
+    移动到/tmp目录
+        mv file /tmp/
+        mv /home/kyo/test/file /tmp/
+
+    将指定路径下的文件移动到当前路径
+        mv /tmp/mvfile .
+
+    移动并且重命名
+        mv /kyo/linux.txt /mnt/unix.txt
+
+    强制提示是否覆盖(目标路径文件已存在, 默认为直接覆盖)
+        mv -i /kyo/linux.txt /mnt/unix.txt
+
+    对比源与目标文件的时间决定是否覆盖(源文件比目标文件时间新才会覆盖)
+        mv -u /kyo/linux.txt /mnt/unix.txt
+
+    多个文件或目录移动到同个目标路径
+        mv a.file b.file c.file /tmp
+            或
+        mv --target-directory=/tmp a.file b.file c.file
+
+            最后一参数为目标路径，目标必须是已存在的目录
+            移动过程中不能修改名字
+-------------------------------------------------------------------------------
+rm
+    格式: rm 文件路径
+
+    删除一个文件
+        rm /kyo/file.txt
+
+    删除一个目录
+        rm -r /kyo
+
+    删除多个目录
+        rm -r /home/kyo/test /tmp/test
+
+    万能删除命令
+        rm -rf path...
+        rm -rf *
+-------------------------------------------------------------------------------
+cp      复制
+    格式: cp [选项]... 源路径... 目标路径
+
+    -i      强制提示是否覆盖
+    -v      显示正在复制信息
+    -r      复制目录
+    -u      更新,源文件与目标文件同名， 根据时间方案进行自动覆盖
+    -f      强制覆盖同名文件
+    -p      保留源文件的权限
+    -a      尽可能保持文件的结构和属性, 相当于-dpR
+
+-------------------------------------------------------------------------------
+文件阅读命令
+    cat     将文件内容直接输出在终端
+        cat /etc/passwd
+        cat -n /etc/passwd
+
+    head    默认为文件前10行内容
+        head -n 3 /etc/passwd
+
+    tail    默认为文件后10行内容
+        tail -n 3 /etc/passwd
+
+    less    终端换页显示文件内容
+
+管道    |
+
+    格式: 命令1 | 命令2 | 命令3 ... | 命令n
+        将管道符号前面命令标准输出重定向管道符号后面命令标准输入
+
+重定向  > >> 1> 2> &> >> 1>> 2>> &>> < << <<<
+    一般情况下符号后跟的是文件路径
+
+标准输入    0   /dev/stdin
+标准输出    1   /dev/stdout
+错误输出    2   /dev/stderr
+
+            &   所有输出
+            /dev/null   空洞文件, 往里面写内容消失
+
+    >       输出重定向, 清空文件再写
+    >>      输出重定向，追加
+
+    <       输入重定向, 后面跟文件，将文件内容作为前面命令的标准输入
+
+    <<      输入重定向, 后面跟结束标识符, 将结束标识符前面内容作为命令的标准输入
+    <<<     输入重定向, 后面跟字符串，将字符串作为命令的标准输入
+
+-------------------------------------------------------------------------------
+Ubuntu - VNC viewer的安装:
+
+    cd /tmp
+
+    wget http://3.3.3.9/share/software/VNC-Viewer-6.18.625-Linux-x64.deb
+    sudo dpkg -i VNC-Viewer-6.18.628-Linux-x64.deb
+
+
+-------------------------------------------------------------------------------
+将文件内容追加至指定文件
+    cat file >> /tmp/file
+
+-------------------------------------------------------------------------------
+vim
+    三种模式
+        普通模式(default)        快捷操作(定位, 删除 替换 查找)
+            可视模式
+
+        编辑模式
+            插入模式
+            替换模式
+
+        命令行模式      文档操作/扩展操作
+
+    普通模式切换编辑模式: i/a/A/I/s/S/R/o/O
+    编辑模式切换普通模式: ESC
+    普通模式切换命令行模式:　冒号(:)
+    命令行模式切换普通模式: ESC
+
+    定位
+        h/j/k/l             左下上右
+        ctrl + d/u/f/b      换页
+        b/w/e/B/W/E         单词定位
+        0                   将光标定位到开头位置
+        ^                   将光标定位到开头有效字符位置
+        $                   将光标定位到行尾
+        G                   将光标定位到最后一行
+        gg                  将光标定位到第一行
+
+        :10                 定位到第10行
+        :set nu             显示行号
+
+    配置文件(配置vim初始功能)
+        全局配置    /etc/vimrc
+        用户配置    ~/.vimrc
+
+        将以下内容写入配置文件, 重启vim即可实现
+
+            set nu
+
+    选取(可视模式)
+        v           按字符进行选取
+        V           按行进行选取
+        ctrl + v    按列进行选取
+
+        ggVG        全选
+
+    查找
+        /                   查找
+            /hello 按回车进行高亮查找关键词
+            n/N     进行上下定位查找关键词
+            进入命令行输入 noh 取消高亮
+
+    删除
+        s       删除一个字符进入插入模式
+        S       删除一行进入插入模式
+        dd      删除一行
+        x       删除一个字符
+
+
+    撤消/重做
+        u           撤消
+        ctrl + r    重做撤消操作
+
+    复制/剪切/粘贴
+        yy      复制一行
+        yw      复制一个单词(要求光标在单词开头)
+        p       粘贴到光标后面
+        P       粘贴到光标前面
+
+    数字前缀
+        10yy        复制10行
+        10dd        删除10行
+
+    命令行操作
+        :w      保存
+        :q      退出
+        :wq     保存退出
+        :w!     强制保存
+        :q!     强制退出
+        :qall   退出所有编辑文档
+        :w /tmp/new.file    另存为到/tmp/new.file
+        :e /etc/passwd  打开文件
+            缓存区管理
+                列表缓存区 :ls
+                切换缓存区 :bn / :bp
+
+            标签管理
+                新建标签　:tabnew /tmp/hello.txt
+                切换标签　gt/gT
+
+        :r  1.txt   将1.txt内容导入本编辑文档
+        :r! ls      将ls的标准输出导入本编辑文档
+
+        :vsp /tmp/hello.txt 竖向分屏编辑
+        :sp /tmp/hello.txt  横向分屏编辑
+            ctrl + w + w
+
+    替换
+        :1,$s/root/ROOT/g
+        :10,20s/root/ROOT/g
+
+        先选取再按:s/root/ROOT/g
+
+-------------------------------------------------------------------------------
+kyoVim配置
+
+    wget -O ~/vim.tar http://3.3.3.9/share/software/vim.tar
+    cd ~
+    tar -xf vim.tar
+    cd vim
+    ./linux_install.sh
+
+-------------------------------------------------------------------------------
+ubuntu桌面环境熟悉
+
+    快捷键
+        ctrl + win + 上下左右   窗口控制
+        长按win键               显示桌面快捷键(设置 -> 键盘 -> 快捷键)
+        alt + F4/F7/F8  与 centos7 一样
+
+        ctrl + win + d          回到桌面
+
+        ctrl + alt + t          打开终端
+
+    软件源
+        http://mirrors.aliyun.com
+
+        源配置: /etc/apt/sources.list
+            deb http://mirrors.aliyun.com/ubuntu/ xenial main restricted universe multiverse
+            deb http://mirrors.aliyun.com/ubuntu/ xenial-security main restricted universe multiverse
+            deb http://mirrors.aliyun.com/ubuntu/ xenial-updates main restricted universe multiverse
+            deb http://mirrors.aliyun.com/ubuntu/ xenial-proposed main restricted universe multiverse
+            deb http://mirrors.aliyun.com/ubuntu/ xenial-backports main restricted universe multiverse
+            deb-src http://mirrors.aliyun.com/ubuntu/ xenial main restricted universe multiverse
+            deb-src http://mirrors.aliyun.com/ubuntu/ xenial-security main restricted universe multiverse
+            deb-src http://mirrors.aliyun.com/ubuntu/ xenial-updates main restricted universe multiverse
+            deb-src http://mirrors.aliyun.com/ubuntu/ xenial-proposed main restricted universe multiverse
+            deb-src http://mirrors.aliyun.com/ubuntu/ xenial-backports main restricted universe multiverse
+
+
+        更新软件源索引
+            sudo apt update
+
+        安装
+            sudo apt install vim tmux git -y
+
+            sudo apt install ./VNC-Viewer-6.18.625-Linux-x64.deb
+
+        删除
+            sudo apt remove --purge tmux git vim -y
+
+-------------------------------------------------------------------------------
+mplayer         视频
+    sudo apt install mplayer -y
+
+firefox/chromium-browser/w3m    网页浏览器
+    sudo apt install chromium-browser w3m -y
+
+curl/wget            下载工具
+    wget -O /tmp/123.txt http://3.3.3.9/kyo/linux/0_linux.txt
+    curl -o /tmp/123.txt http://3.3.3.9/kyo/linux/0_linux.txt
+
+gedit               文本编辑器
+
+nautilus            文件浏览器
+
+eog                 图片浏览器
+
+evince              PDF浏览器
+
+soffice             办公软件
+
+realvnc             共享桌面
+    共享端:
+        sudo apt install ./VNC-Server-6.3.1-Linux-x64.deb
+
+        sudo vnclicense -add 84WFN-YRJ4C-WA44V-9BW6X-PAE2A
+
+        sudo vncserver-x11
+
+    连接端:
+        sudo apt install ./VNC-Viewer-6.18.625-Linux-x64.deb
+
+        vncviewer
+
+kazam               录屏软件
+    sudo apt install kazam -y
+
+cal                 日历
+    cal
+    cal 2018
+    cal 7 2000
+
+date                日期时间
+
+    date -s     修改日期和时间
+    date -d     计算日期
+    date +"%Y"      查看当前年
+    date ""%F"      查看当前年月日
+
+bc                  命令行计算器
+    bc
+    bc <<< "(5+4)/3"
+    bc <<< "scale=3;10/3"
+    bc <<< "ibase=2;101"
+    bc <<< "ibase=2;obase=16;1010"
+
+cut                 文本截取
+
+    cut -d ":" -f3
+        或
+    awk -F":" '{print $3}'
+
+tr                  文本字符替换
+    tr a A /tmp/1.txt
+    tr [a-z] [A-Z] /tmp/1.txt
+    tr -dc '[:alnum:]' /tmp/1.txt
+
+echo                输出命令(脚本)
+    echo "hello world"
+    echo -e "hello\nworld\n"
+    echo -n "hello world"       取消换行输出
+    echo "$HOME"                输出变量值
+
+read                输入命令(脚本)
+    read
+        如果没有指定变量，则写入REPLY变量
+            echo $REPLY
+
+    read v
+        获取用户输入的内容
+            echo $v
+
+openssl             加密
+
+/dev/null           空洞文件, 用于写
+/dev/zero           用于读，永久都是零
+/dev/urandom        用于读，永久都是随机二进制

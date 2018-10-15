@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# 1. 数字范围随机不固定
+# 2. 设置猜数字的最大次数, 给用户提示还有几次机会
+# 3. 设置用户自由退出
+
+# 生成随机范围(50 - 100)
+# len=$[RANDOM % 51 + 50]
+# 生成范围随机起始值(900以内)
+# startNum=$[RANDOM % 900]
+# 计算范围随机结束值 用于用户提示
+# endNum=$[startNum + len]
+
+# 生成用户需要猜的数字
+# guessNum=$[RANDOM % (len + 1) + startNum]
+
+#------------------------------------------------------------------------------
+
+source libs
+# . libs
+
+len=$(kyo_rand 50 100)
+startNum=$(kyo_rand 900)
+endNum=$[startNum + len]
+guessNum=$(kyo_rand $startNum $endNum)
+
+
+# 计算允许用户猜的最大次数
+saveNum=$len
+maxGuessCount=-2
+while [ $saveNum -ne 0 ] ; do
+    saveNum=$[saveNum / 2]
+    let maxGuessCount++
+done
+
+# 用户实际猜的次数
+count=0
+
+while : ; do
+    echo "---------- 猜数字游戏 ---------"
+    echo -e "你还有\033[31;1m $[maxGuessCount - count] \033[0m次机会..."
+    read -p "请输入[$startNum - $endNum]的数(q: 为退出): " inputNum
+
+    egrep -q "(^[0-9]+$)|(^q$)" <<< $inputNum || continue
+
+    [ "$inputNum" = "q" ] && break
+
+    if [ $inputNum -gt $guessNum ] ; then
+        echo '真可惜! 就大了那么一点点...'
+    elif [ $inputNum -lt $guessNum ]; then
+        echo '真历害! 就小了那么一点点...'
+    else
+        echo "恭喜你，中奖了, 请留下联系电话方便发送奖品!!"
+        break
+    fi
+    let count++
+
+    if [ $count -eq $maxGuessCount ]; then
+        echo "你的机会已经用完!!"
+        break
+    fi
+    echo
+done

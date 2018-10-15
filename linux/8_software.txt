@@ -1,0 +1,493 @@
+软件管理
+    rpm     特定的压缩包
+        安装rpm包就是解压压缩包, 将编译过的文件打包按一定规则解压
+        rpm 命令即是解析压缩包
+
+        rpm包名
+            软件名-版本号.系统标识.CPU体系(平台)[.src].rpm
+
+            zip-3.0-11.el7.x86_64.rpm
+                zip     软件名
+                3.0-11  版本号
+                el7     系统标识(红帽7系统编译打包)
+                x86_64  CPU体系, 体系不一样互相不兼容
+                    noarch  此软件包与平台无关
+
+        rpm源码包
+            软件名-版本号.src.rpm
+
+        查找rpm:
+            http://rpmfind.net
+
+        安装
+            rpm -ivh rpm包文件路径
+                -i      安装, 第二个进度条显示安装进度
+                -v      显示安装进度
+                -h      检验hash, 第一个进度条
+
+                两个进度完成代表安装成功
+
+            对rpm源码包进入安装， 会解压到家目录的rpmbuild目录下
+
+        查找某个命令的所属rpm包名
+            rpm -qf /usr/bin/wget
+                或
+            rpm -qf $(which wget)
+
+        查看当前系统安装所有rpm包
+            rpm -qa
+
+        查看是否安装某个包
+            rpm -qa wget
+
+        查看rpm包详细信息
+            rpm -qip wget-1.14-15.el7_4.1.x86_64.rpm
+
+        查看rpm包依赖的关系
+            rpm -qpR wget-1.14-15.el7_4.1.x86_64.rpm
+
+        查看已安装rpm包的信息
+            rpm -qR wget-1.14-15.el7_4.1.x86_64
+
+        查看已安装rpm包会释放哪些文件信息
+            rpm -ql wget-1.14-15.el7_4.1.x86_64
+
+        查看rpm包文件会释放哪些文件信息
+            rpm -qlp wget-1.14-15.el7_4.1.x86_64.rpm
+
+
+        卸载rpm包
+            格式: rpm -e rpm包名
+
+            例:
+                获取命令的路径
+                    which wget
+
+                获取包名
+                    rpm -qf /usr/bin/wget
+
+                卸载
+                    rpm -e wget-1.14-15.el7_4.1.x86_64
+
+                一步到位
+                    rpm -e $(rpm -qf $(which wget))
+
+        rpm安装选项
+            -U          升级安装
+            -F          强制安装
+            --prefix    指定安装路径, 一般推荐默认路径
+            --nomd5     不检验md5值
+            --test      测试在本系统是否能安装
+            ...
+            帮助信息: man rpm
+
+-------------------------------------------------------------------------------
+yum
+    封装rpm, 自动处理rpm之间依赖关系, 使软件安装更简单
+
+    yum源/yum仓库， 依赖rpm工具(最终安装或获取依赖都是通过rpm工具)
+
+    yum源配置(告诉yum, 我们的rpm仓库在哪个位置)
+        /etc/yum.repos.d/*.repo
+            [kyo]
+            name=centos7
+            baseurl=http://3.3.3.1/centos/
+            gpgcheck=0
+
+    清除原有缓存
+        yum clean all
+
+    更新配置后yum缓存(索引缓存)
+        yum makecache
+
+    列表配置后的仓库
+        yum list
+
+    安装软件
+        yum install 软件名
+            或
+        yum install 软件名 -y
+            安装过程不会询问是否安装
+
+    卸载软件
+        yum erase 软件名
+
+    列出软件包的依赖
+        yum deplist 软件名
+
+    查看软件包的信息
+        yum info 软件名
+
+    查找软件包释放文件包含关键词的条目
+        yum provides "/etc/mime.types"
+
+    根据包名查找软件名
+        yum search vim
+
+    重装软件
+        yum reinstall vim -y
+
+    查看软件组
+        yum grouplist
+
+    安装软件组
+        yum groupinstall "GNOME Desktop"
+
+    卸载软件组
+        yum groupremove "GNOME Desktop"
+
+扩展学习
+    制作rpm包
+    搭建自己的rpm仓库
+
+-------------------------------------------------------------------------------
+打包/解包(tar)
+    选项
+        -f      指定操作文件
+        -c      打包
+        -x      解包
+        -C      指定解包路径
+        -v      显示过程
+        -t      列表包内容
+        -r      追加 (同一文件会追加多次)
+        -u      更新 (文件不存在追加，文件存在对比时间进行更新操作)
+        -d      对比包内容
+        --delete    删除包内容
+        -z      调用gzip工具(czf 代表打包压缩, xzf 代表解压解包)
+        -j      调用bzip2工具(cjf 代表打包压缩, xjf 代表解压解包)
+        -J      调用xz工具(cJf 代表打包压缩, xJf 代表解压解包)
+
+    打包
+        格式: tar -cf 生成的打包文件路径 要打包的文件或目录的路径...
+
+            tar -cf /tmp/etc.tar /etc/
+
+            打包etc到标准输出, 用于与其它组合使用
+                tar -cf - /etc/
+
+    打包过滤文件或目录
+        tar -cf /tmp/etc.tar /etc/ --exclude=wgetrc --exclude=vim
+
+    解包
+        格式: tar -xf 解包文件路径 [指定提取文件...] [-C 指定解压路径]
+
+            tar -xf /tmp/etc.tar
+
+            tar -xf /tmp/etc.tar -C /dev/shm/
+
+            tar -xf /tmp/etc.tar wgetrc
+
+    查看包
+        格式: tar -tf 查看包的路径
+
+    更新包
+        格式: tar -uf 追加的包路径 追加文件或目录路径...
+
+    删除包内容
+        格式: tar -f 包路径 --delete 要删除文件或目录
+
+    对比包内容
+        格式: tar -df 包路径 对比文件或目录路径
+
+    gzip格式打包压缩
+        tar -czf etc.tar.gz /etc
+
+    gzip格式解压
+        tar -xzf etc.tar.gz
+
+    bzip2格式打包压缩
+        tar -cjf etc.tar.gz /etc
+
+    bzip2格式解压
+        tar -xjf etc.tar.gz
+
+    万能解压
+        tar -xf etc.tar
+        tar -xf etc.tar.gz
+        tar -xf etc.tar.bz2
+        tar -xf etc.tar.xz
+
+-------------------------------------------------------------------------------
+压缩/解压
+    windows:
+        winrar  *.rar (收费)
+        winzip  *.zip
+
+    linux:
+        compress *.Z (过时)
+        gzip     *.gz / *.tar.gz / *.tgz
+        bzip2    *.bz2 / *.tar.bz2
+        xz       *.xz  / *.tar.xz
+
+        zip/unzip   *.zip
+        rar      *.rar
+
+        压缩: 先用tar进行打包，再调用对应压缩工具进行压缩
+        解压: 先调用对应压缩工具解压，再用tar进行解包
+
+    gzip
+        压缩
+            gzip 文件
+
+            不删除原文件压缩
+                gzip -c 文件 > gz压缩文件
+
+        解压
+            gzip -d gz压缩文件
+
+        查看gz压缩文件
+            zcat gz压缩文件
+            zless gz压缩文件
+
+        对比两个gz压缩文件
+            zcmp gz压缩文件1 gz压缩文件2
+
+    bzip2
+        压缩
+            bzip2 文件
+
+            不删除原文件压缩
+                bzip2 -c 文件 > bz2压缩文件
+
+        解压
+            bzip2 -d bz2压缩文件
+
+    xz
+        用法与bzip2/gzip工具一样
+
+    zip
+        压缩
+            zip -r zip压缩名 要压缩的文件或目录...
+
+        解压
+            unzip zip压缩名
+
+    rar
+        压缩
+            rar a rar压缩名 要压缩的文件或目录路径...
+
+        解压
+            rar x rar压缩名
+                保留压缩包里目录结构
+
+            rar e rar压缩名
+                将压缩包的文件直接提取, 不保留压缩包目录结构
+
+-------------------------------------------------------------------------------
+GPG - 文件加密
+    非对称加密(公钥/私钥) RSA算法
+        公钥负责加密， 私钥负责解密
+    GNUPG开源工具实现非对称加密
+
+    安装:
+        ubuntu: sudo apt install gunpg -y
+        centos: yum install gunpg -y
+
+    查看当前系统所有密钥对
+        gpg --list-keys
+
+    创建密钥对
+        gpg --gen-key
+            1. 选择什么加密算法(推荐默认, 直接按回车)
+            2. 确定密钥长度 (默认为2048)
+                1024 2048 4096(长度越长越安全, 生成密钥时间就越久)
+            3. 确定密钥的有效时间 (默认为永不过期)
+            4. 确认以上是否正确
+            5. 输入密钥信息(姓名 邮箱 注释)
+            6. 输入密钥保护密码
+
+    加密
+        gpg -r 密钥标识 [-o 加密生成文件路径] -e [准备要加密的文件]
+            默认生成加密文件格式为二进制, 通过-a选项指定生成文件格式为文本格式
+            如果不指定加密生成文件路径，则输出到标准输出
+            如果加密文件不指定则读标准输入
+
+        加密/etc/passwd文件, 生成文本加密文件到/tmp/test/gpg.file
+            gpg -r 1234567@163.com -o /tmp/test/gpg.file -a -e /etc/passwd
+
+    解密
+        gpg -r 密钥标识 [-o 解密生成文件路径] -d [gpg加过密的文件]
+            如果不指定解密生成文件， 解密到标准输出
+            如果不指定加过密的文件， 将标准输入作为源文件
+
+    公钥导出
+        格式: gpg [-a] -o 公钥导出路径 --export 密钥标识
+
+            gpg -a -o public.key --export 1234567@163.com
+
+    私钥导出
+        格式: gpg -a -o 私钥导出路径 --export-secret-keys 密钥标识
+
+            gpg -a -o private.key --export-secret-keys 1234567@163.com
+
+    密钥导入
+        格式: gpg --import 密钥导出文件
+
+        私钥导入设置密钥信任(不设置每次加密都会提示信任问题):
+            gpg --edit-key 1234567@163.com trust quit
+                选择5最高信任级别, 再按Y确认退出
+
+    上传公钥
+        gpg --keyserver hkp://keys.gnupg.net --send-keys 公钥ID
+
+    查找公钥
+        gpg --keyserver hkp://keys.gnupg.net --search-keys 公钥标识
+
+-------------------------------------------------------------------------------
+源码包编译安装
+    大部分源码包使用autoconf项目自动生成编译环境
+
+    源码包即是压缩包, 首先必须解压并且进入解压后目录
+        tar -xf wget-1.14.tar.xz
+        cd wget-1.14
+            INSTALL     安装帮助文档
+
+            ./configure --help 获取安装帮助信息
+
+    清除上一次编译情况
+        make clean
+        make disclean
+
+    探测操作系统环境是否满足本项目的依赖 (配置项目功能)
+        ./configure
+            如果任何错误才能进行下一步
+            错误一般都依赖的工具或库没有安装或者版本不对
+
+    编译
+        make -j4
+            -j4 代表开多核执行
+
+    安装
+        make install
+
+    卸载
+        make uninstall
+
+-------------------------------------------------------------------------------
+作业: centos7安装以下源码包
+
+所有源码包都在3.3.3.9:/kyo/tools/software/
+
+rpm源码包安装演示
+    wget-1.14-15.1.src.rpm
+
+终端打字程序
+    ptyping-1.0.1.tar.gz
+
+支持ntfs格式挂载
+    ntfs/ntfs-3g-2009.4.4.tgz
+
+
+mplayer播放器
+    MPlayer-1.2.tar.xz
+    yasm
+
+星际译王
+    stardict/stardict-3.0.2.tar.bz2
+
+    计算机词库:
+        stardict-kdic-computer-gb-2.4.2.tar.tar
+        ...
+    sudo yum install gcc -y
+
+    ./configure --disable-gucharmap --disable-festival
+
+    scene.hpp +21 NULL
+        NULL -> 0
+
+    依赖:
+        intltool
+            sudo yum install intltool -y
+
+        gnome-doc-utils
+            sudo yum install gnome-doc-utils
+
+        enchant-devel
+            sudo yum install enchant-devel
+
+        gucharmap-devel
+            安装之后还会提示错误， 版本不对应
+            通过禁用此插件来继续编译
+                ./configure --disable-gucharmap
+
+        festival-devel
+            安装之后还会提示错误
+                ./configure --disable-gucharmap --disable-festival
+
+        espeak-devel
+            sudo yum install espeak-devel -y
+
+        libgnomeui-2.0-devel
+            sudo yum install libgnomeui-devel
+
+        libz
+            sudo yum install gcc-c++  -y
+
+        scrollkeeper-config
+            sudo yum install scrollkeeper -y
+
+坦克大战
+    662206tank-sdl-0.3.0.tar.gz
+
+    sudo apt install libsdl1.2-dev libsdl-image1.2-dev libsdl-mixer1.2-dev -y
+
+仙剑1
+    sdlpal
+        cd sdlpal/code
+        make clean
+        make
+            vim nbproject/Makefile-Release.mk
+                LDLIBSOPTIONS=-lm -lSDL
+        cp dist/Release/GNU-Linux-x86/sdlpal ..
+        cd ..
+        ./sdlpal
+
+
+编译C代码遇到通用问题:
+    问题: 找不到*.h文件
+    解决: 绝对使用-I解决
+        已知依赖的*.h文件在哪(不知道则需要查找系统或者百度)
+
+        通过-I选项告诉gcc我们头文件在哪
+            gcc -I/kyo/code/include
+
+        Makefile里通过CFLAGS变量来指定头文件路径
+            CFLAGS=-I/kyo/code/include
+
+    问题: libSDL.so: undefined reference to `_XGetRequest'
+    解决: 绝对使用-l解决
+        Makefile里通过LDFLAGS 或 LIBS变量来指定库
+            LDFLAGS=-lX11
+            LIBS=-lX11
+
+    问题: ld: 找不到 -lSDL
+    解决: 绝对使用-L解决
+        Makefile里通过LDFLAGS 或LIBS 变量来指定库的路径
+            LDFLAGS=-L/kyo/code/lib -lSDL -lSDL_image -lSDL_mixer -lX11
+
+    问题: error while loading shared libraries: libSDL_image-1.2.so.0
+    解决: 前提系统已安装好此库,并且知道库所在路径
+        系统标准库路径: /usr/lib /lib
+
+        临时解决: 通过LD_LIBRARY_PATH环境变量来指定库路径
+            export LD_LIBRARY_PATH=/kyo/code/lib
+            ./tank
+
+        永久解决: /etc/ld.so.conf
+            将依赖库路径追加到/etc/ld.so.conf, 再刷新动态库路径: sudo ldconfig
+
+sdl库源码包
+    sdl
+
+    编译SDL-1.2:
+        错误： operand type mismatch for `movq'
+        解决: ./configure --disable-assembly
+
+        错误: ./src/video/x11/SDL_x11sym.h:168:17: error: conflicting types for ‘_XData32’
+        解决: vim ./src/video/x11/SDL_x11sym.h +168
+            SDL_X11_SYM(int,_XData32,(Display *dpy,register _Xconst long *data,unsigned len),(dpy,data,len),return)
+
+        错误: undefined reference to `_XGetRequest'
+        解决: vim Makefile +171
+            LIBS =  -L/kyo/code/lib -Wl,-rpath,/kyo/code/lib -lSDL -lpthread -lX11
+

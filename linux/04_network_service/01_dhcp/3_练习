@@ -1,0 +1,148 @@
+一、安装dhcpd服务器
+实验环境
+1. 一台虚拟机做服务器，另外一台虚拟机做客户机，服务器和客户机都连接到 br0
+2. 把物理网卡从网桥br0中删除（如果这样做，那么物理机就不能上网了）
+    brctl delif br0 enp0s25
+    ip a del 3.3.3.11/24 dev br0
+    ip a add 3.3.3.11/24 dev enp0s25
+3. 假设IP 网段是10.1.1.0/24
+
+
+1. 服务器（虚拟机）预备工作：
+为避免防火墙和SELinux (security enhanced linux) 影响实验，先执行以下步骤：
+    1.1 清空防火墙规则，并把INPUT链的默认策略设置为ACCEPT
+    [root@mob ~]# iptables -F
+    [root@mob ~]# iptables -P INPUT ACCEPT
+
+    1.2 确保SELinux 的状态是Permissive 或者 Disable
+    [root@mob ~]# setenforce 0      <-- 暂时关闭SELinux
+    [root@mob ~]# getenforce        <-- 查询SELinux 的状态
+
+    可以修改配置文件 /etc/selinux/config，永久关闭SELinux。
+
+
+2. 配置服务器（虚拟机）上的网卡的 IP，可以用ip命令來临时配置，
+[root@mob conf]# ip a add 10.1.1.1/24 dev eth0
+
+3. 在服务器上安装dhcp 的包（此时，虚拟机已经不能连接外网，所以这里使用本地yum源）
+[root@mob conf]# yum install dhcp
+
+4. 编辑dhcpd的配置文件，详细配置参数参考 man 5 dhcpd.conf
+[root@mob conf]# vi /etc/dhcp/dhcpd.conf
+----------------------------------------------------
+allow bootp;
+default-lease-time 600;
+max-lease-time 7200;
+log-facility local7;
+subnet 10.1.1.0 netmask 255.255.255.0 {
+        option routers                  10.1.1.1;       <-- 默认网关
+        option subnet-mask              255.255.255.0;  <-- 子网掩码
+        option domain-name              "abc.com";      <-- 搜索域
+        option domain-name-servers      223.5.5.5;      <-- 域名服务器
+        range dynamic-bootp 10.1.1.101 10.1.1.254;      <-- 可供分配的IP范围
+}
+----------------------------------------------------
+
+注意事项：
+a. 服务器网卡的IP 地址必须包含在subnet 10.1.1.0 netmask 255.255.255.0 的范围之内
+b. range dynamic-bootp 10.1.1.101 10.1.1.255 所设置的IP 范围必须在subnet 10.1.1.0 netmask 255.255.255.0 的范围之内
+
+
+5. 在服务器（虚拟机）上重启dhcpd 服务
+[root@mob ~]# service dhcpd restart
+或者
+[root@mob ~]# systemctl restart dhcpd
+
+6. 启动客户机，使用dhcp 来配置IP，可以通过修改配置文件的方法，也可以使用dhclient临时测试
+
+    1. 写配置文件：
+        1. 写配置
+            [root@client ~]# cat /etc/sysconfig/network-scripts/ifcfg-eth0
+            DEVICE="eth0"
+            BOOTPROTO="dhcp"
+            NM_CONTROLLED="no"
+            ONBOOT="yes"
+            TYPE="Ethernet"
+        2. 重启客户机的网络服务
+            [root@client ~]# service network restart
+
+    临时使用dhclient命令:
+        dhclient eth0
+
+
+
+
+
+
+
+
+
+二、为多个局域网中的客户端分配IP 地址
+实验环境
+1. 创建两个虚拟网络：net1, net2，在这两个虚拟网络里面不启用DHCP
+2. 一虚拟机做服务器，两台虚拟机做客户机，服务器上两个网卡，分别属于两个虚拟网络: net1, net2
+   第一台客户机属于net1，第二台客户机属于net2
+3. IP地址的分配：
+    服务器网卡一: 10.1.1.1/24，提供IP段 10.1.1.101 - 10.1.1.254
+    服务器网卡二: 10.1.2.1/24，提供IP段 10.1.2.101 - 10.1.2.254
+
+
+1. 服务器预备工作：
+为避免防火墙和SELinux (security enhanced linux) 影响实验，先执行以下步骤：
+    1.1 清空防火墙规则，并把INPUT链的默认策略设置为ACCEPT
+    [root@mob ~]# iptables -F
+    [root@mob ~]# iptables -P INPUT ACCEPT
+
+    1.2 确保SELinux 的状态是Permissive 或者 Disable
+    [root@mob ~]# setenforce 0      <-- 暂时关闭SELinux
+    [root@mob ~]# getenforce        <-- 查询SELinux 的状态
+
+
+2. 配置服务器上两个网卡的IP
+[root@mob conf]# ip a add 10.1.1.1/24 dev eth0
+[root@mob conf]# ip a add 10.1.2.1/24 dev eth1
+
+3. 在服务器上安装dhcp 的包
+[root@mob conf]# yum install dhcp
+
+4. 编辑dhcpd的配置文件，详细配置参数参考 man 5 dhcpd.conf
+[root@mob conf]# vi /etc/dhcp/dhcpd.conf
+----------------------------------------------------
+allow bootp;
+default-lease-time 600;
+max-lease-time 7200;
+log-facility local7;
+subnet 10.1.1.0 netmask 255.255.255.0 {
+        option routers                  10.1.1.1;      <-- 默认网关
+        option subnet-mask              255.255.255.0;  <-- 子网掩码
+        option domain-name              "abc.com";      <-- 搜索域
+        option domain-name-servers      10.1.1.1;      <-- 域名服务器
+        range dynamic-bootp 10.1.1.101 10.1.1.255;    <-- 可供分配的IP范围
+}
+subnet 10.1.2.0 netmask 255.255.255.0 {
+        option routers                  10.1.2.1;      <-- 默认网关
+        option subnet-mask              255.255.255.0;  <-- 子网掩码
+        option domain-name              "abc.com";      <-- 搜索域
+        option domain-name-servers      10.1.2.1;      <-- 域名服务器
+        range dynamic-bootp 10.1.2.101 10.1.2.255;    <-- 可供分配的IP范围
+}
+----------------------------------------------------
+
+5. 重启dhcpd 服务
+[root@mob ~]# systemctl restart dhcpd
+
+6. 启动客户机，使用dhcp 来配置IP，可以通过修改配置文件的方法，也可以使用dhclient临时测试
+
+    1. 写配置文件：
+        1. 写配置
+            [root@client ~]# cat /etc/sysconfig/network-scripts/ifcfg-eth0
+            DEVICE="eth0"
+            BOOTPROTO="dhcp"
+            NM_CONTROLLED="no"
+            ONBOOT="yes"
+            TYPE="Ethernet"
+        2. 重启客户机的网络服务
+            [root@client ~]# systemctl restart network
+
+    临时使用dhclient命令:
+        dhclient eth0

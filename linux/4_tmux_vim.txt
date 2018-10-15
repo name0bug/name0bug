@@ -1,0 +1,137 @@
+tmux
+    开源的终端管理工具
+
+    安装:
+        ubuntu:
+            sudo apt install tmux -y
+
+        centos7:
+            sudo yum install tmux -y
+
+    会话  -  解决客户端连接断开， 重连能还原最后操作界面
+        创建会话
+            在独立bash Shell中输入: tmux
+                或
+            tmux new-session -s 会话名称
+
+        查看会话列表
+            tmux list-session
+
+        分离会话(会话挂起)
+            在tmux终端内:
+                ctrl + b   d
+                    或
+                ctrl + b   D
+
+        唤醒会话
+            tmux attach -t 会话名称
+
+        选择会话
+            ctrl + b s
+                通过上下键进行按回车进行选择
+
+        关闭会话
+            将tmux所有终端退出，即关闭会话
+
+            tmux kill-session -t 会话名称
+
+        重命名会话名称
+            ctrl + b $
+
+    窗口   一个会话当中至少要有一个窗口(标签显示)
+        创建窗口
+            ctrl + b c
+
+        关闭窗口
+            退出bash即关闭窗口
+                或
+            ctrl + b &
+
+        列表窗口
+            ctrl + b w
+
+        选择窗口
+            选择第一个窗口: ctrl + b 0
+            选择第二个窗口: ctrl + b 1
+            ...
+
+            kyo配置
+                alt + 1 ~ 9
+
+    窗格    一个窗口至少要有一个窗格(分屏显示)
+        创建窗格
+            竖分屏 ctrl + b |
+            横分屏 ctrl + b -
+
+        关闭窗格
+            ctrl + b x
+
+        选择窗格(切换)
+            ctrl + b h/j/k/l
+
+    配置文件 ~/.tmux.conf
+
+
+    滚动窗口(剪切板操作)
+        复制:
+            进入vi操作复制模式
+                ctrl + b y
+
+                在复制模式下按v选取再按y可进行复制(退出复制模式)
+
+        粘贴:
+            ctrl + b p
+
+        依赖kyo配置及xclip工具
+            sudo apt install xclip -y
+
+-------------------------------------------------------------------------------
+vim
+    问题: 粘贴剪切板内容，没有保留原有格式
+    解决: 将vim进入粘贴模式，再粘贴则会保留原有格式
+
+		开启vim粘贴模式
+			:set paste
+
+		开启vim粘贴模式
+			:set nopaste
+
+        kyo配置(开关粘贴模式)
+            ,pa
+
+    自动对齐(格式化代码, 与文件类型相关) =
+        选取要格式化的代码块再按=
+
+    批量缩进
+        选取要缩进的代码块再按大于号或小于号
+
+    批量注释
+        ,cc     批量注释
+        ,cu     取消注释
+
+    行尾空白字符
+        ,ws     取消本文件行尾空白字符
+
+
+    快速写入分隔符
+        ,kl
+        ,kg
+
+    vim配置文件设置快捷键
+        nnoremap 快捷键 快捷键触发的操作
+
+        nnoremap ,o ihello world<ESC>
+        inoremap <C-O> <ESC>GVggyi
+        vnoremap ...
+
+    F7  文件浏览器
+        上下键选择
+        按回车直接打开
+        按t以标签形式打开
+
+
+    ctrl + p    全局模糊匹配文件
+        ctrl + jk   上下选择
+        ctrl + t    标签打开
+        ctrl + v    竖分屏打开
+

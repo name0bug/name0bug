@@ -1,0 +1,35 @@
+支持双引导的U盘启动盘制作: 使用grub2来实现
+    Windows下使用grub2win来制作
+    GNU/Linux系统下制作更加方便，系统本身就已经提供了很多工具
+    CentOS/RHEL6及以下版本使用的是Grub Legacy， 已经停止维护，不建议使用
+
+    1. U盘转为GPT分区
+        实现UEFI与BIOS双支持, 则必须使用GPT分区，GPT兼容MBR
+        Linux下支持GPT分区的工具有parted,gdisk, 图形工具有gparted
+        gdisk使用与fdisk一样, 对U盘重新分区
+
+    2. 划分ESP, 格式化为FAT32格式
+        gdisk工具给分区标记EF00编号
+        parted工具给分区标记为boot即可
+
+    3. 划分bios_grub分区
+        bios_grub标记的分区必须存在，否则在bios模块下无法使用
+        分区空间容量为1M, 不需要格式化，设置bios_grub标记(EF02)
+        如果不标记后面安装grub会报错
+
+    4. 安装grub到U盘
+        挂载U盘使用
+            sudo mount /dev/sdb1 /mnt -o uid=$USER,gid=$USER
+        grub安装到MBR
+            sudo grub-install --target=i386-pc --recheck --boot-directory=/mnt/boot /dev/sdb
+        grub安装到ESP
+            sudo grub-install --target x86_64-efi --efi-directory /mnt --boot-directory=/mnt/boot --removable
+                --removable选项为安装到移动设备上, 一定要用此选项
+                i386-pc包含在grub-pc这个安装包中，如果系统使用BIOS+MBR，默认存在
+                x86_64-efi包含在grub-efi这个安装包， 如果系统使用UEFI+GPT,才会存在
+                如果提示找不到目标，则安装grub-pc和grub-efi包再试
+
+    5. 添加grub菜单
+        这里参考grub2命令进行配置，可以启动ISO文件，启动操作系统，重启操作系统等
+        vim /mnt/boot/grub.cfg
+

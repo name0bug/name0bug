@@ -1,0 +1,67 @@
+#!/bin/bash
+
+# 索引数组
+a=(1 2 3 4 5 hello 345.6788)
+
+a[7]=7777
+
+a+=(8888 999 3333)
+
+# echo ${a[3]}
+# a[3]=456
+# unset a[3]
+# echo ${a[*]}
+
+# 索引数组使用键值对赋值, 固定赋在第一个元素, 不建议索引数组使用键值对
+a['kyo']=KYO
+a['tom']=TOM
+echo ${a[0]}
+echo ${a['kyo']}
+a[4]=KYO
+
+echo
+
+echo ${#a[*]}
+echo
+
+len=${#a[*]}
+
+# for i in $(seq 0 $[len - 1]) ; do
+    # # echo ${a[$i]}
+    # a[$i]=$[RANDOM % 100]
+# done
+
+for i in ${a[*]} ; do
+    echo $i
+done
+
+echo '--------------------- B ARRAY -----------------------------'
+# 索引数组定义方式二
+
+b[3]=hello
+b[9]=world
+b['tom']=TOM
+b['kyo']=KYO
+
+echo ${b[*]}
+echo ${#b[*]}
+len=${#b[*]}
+
+
+echo ${b['tom']}
+
+for i in ${b[*]}; do
+    echo $i
+done
+
+echo '--------------------- C ARRAY -----------------------------'
+# 键值对数组
+declare -A c
+
+c=(['name']=kyo ['age']=33)
+
+echo ${#c[*]}
+echo ${!c[*]}
+echo ${c[*]}
+
+

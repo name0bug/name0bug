@@ -1,0 +1,342 @@
+用户管理
+
+    用户信息
+        UID         用户ID, 系统用于标识用户
+        GID         用户所属组的ID
+        用户名
+        密码
+        用户描述
+        用户家目录
+        用户有效期
+        密码有效期
+        警告时间
+        用户shell程序
+        创建时间
+        ...
+
+    用户分类
+        0   超级管理员用户      root
+            系统自带用户, 用于管理其它用户
+
+        1000及以上    普通用户
+            用户系统登录，系统基本操作使用
+
+        1-999      系统用户
+            服务/应用程序对应权限使用, 不允许登录
+
+
+
+    C 新建用户
+        useradd     命令行创建用户
+
+            useradd tom
+
+        adduser     交互创建用户
+
+    D 删除用户
+        userdel
+
+            userdel tom
+
+        deluser
+
+    U 修改用户
+        su              切换当前登录用户
+        passwd          修改用户密码
+        usermod         修改用户信息
+
+    R 用户信息获取
+        id              查看当前登录用户信息
+        id 用户名       查看对应用户的用户信息
+
+    用户配置文件(用户信息存储)
+        /etc/passwd     用户基本信息
+            每一行为一个用户信息
+            每一行以冒号分隔分成七段，保存不同用户信息
+            root:x:0:0:root:/root:/bin/bash
+
+            root            用户名
+            x               密码
+            0               用户ID(UID)
+            0               所属组ID(GID)
+            root            用户描述
+            /root           用户家目录路径
+            /bin/bash       用户执行的shell
+
+        /etc/shadow     用户密码信息
+            man 5 shadow
+            kyo:$1$GQT3BlYO$hoV82YA.6SRFXJUQZdAVR0:17745:0:99999:7:::
+
+    sudo 授权
+        创建普通用户默认没有进行sudo授权, 所以登录不能使用sudo命令
+        sudo 只能执行外部命令, 并且只能执行 secure_path 变量保存目录里的命令
+
+        ubuntu默认对sudo用户组进行sudo授权, 所以只要加入sudo组就可以了
+
+            sudo usermod -G sudo -a 授权用户名
+
+        授权流程:
+            切换root登录(必须是root用户才能授权):
+                su root
+                    或
+                sudo -i
+
+            修改sudo配置
+                vim /etc/sudoers
+                    或
+                visudo
+
+            加入授权用户到配置文件
+                tom ALL=(ALL:ALL) ALL
+
+                    给tom用户sudo授权
+
+                %tom ALL=(ALL:ALL) ALL
+
+                    给tom用户组sudo授权
+
+-------------------------------------------------------------------------------
+组管理
+    用于组织用户， 批量用户权限控制
+
+    配置文件
+        /etc/group
+        /etc/gshadow
+
+    相关命令
+        groupadd
+        groupmod
+        groupdel
+
+-------------------------------------------------------------------------------
+权限
+
+    查看权限    ls -l
+        -rw------- 1 kyo kyo 239418725 8月   3 10:35 1_用户管理_基本命令.mp4
+
+        1                           硬链接数
+        kyo                         所属用户
+        kyo                         所属用户组
+        239418725                   文件大小(单位默认是字节)
+        8月   3 10:35               文件最后修改时间
+        1_用户管理_基本命令.mp4     文件名
+
+        -rw-------                  文件类型和文件权限
+            第一个字符为文件类型
+                -       普通文件
+                    只有普通文件占硬盘空间, 文本文件和二进制文件
+
+                    file        查看普通文件的类型
+                    md5sum      计算文件的检验码
+
+                d       目录
+                l       软链接文件
+
+                    创建软链接:(只是指向文件系统的结点)
+                        ln -s /home/kyo/linux /tmp/linux
+
+                    创建硬链接: (指向硬盘存储位置)
+                        ln /home/kyo/linux /tmp/linux
+
+                c       字符设备文件
+                b       块设备文件
+                p       管道文件
+                s       套接字文件
+
+            后九个字符为文件权限
+                三个字符为一段， 分成三段
+                第一段代表所属用户权限      U
+                第二段代表所属用户组权限    G
+                第三段代表其它用户权限      O
+
+                每段三个字符固定位置: 读 写 执行
+                    如果有权限则有字符，没有权限则为-
+
+                r   读
+                    针对文件, 如果有r标识代表可以查看文件内容
+                    针对目录, 如果有r标识代表可以查看目录里文件列表
+
+                w   写
+                    针对文件, 如果有w标识代表可以修改文件内容
+                    针对目录, 如果有w标识代表可以操作目录里的文件(创建 删除 更新)
+
+                x   执行
+                    针对文件, 如果有x标识代表可以运行文件
+                    针对目录, 如果有x标识代表可以进入目录
+
+        数字权限
+            ---     000     0
+            --x     001     1
+            -w-     010     2
+            -wx     011     3
+            r--     100     4
+            r-x     101     5
+            rw-     110     6
+            rwx     111     7
+
+
+    修改权限        chmod
+
+        chmod u=rw-,g=r--,o=---  /tmp/1.txt
+        chmod u=rw-  /tmp/1.txt
+        chmod u=rw-,o=r--  /tmp/1.txt
+        chmod u+x,g-x,o+x /tmp/1.txt
+        chmod +x /tmp/1.txt
+        chmod 777 /tmp/1.txt   # rwxrwxrwx
+        chmod 0 /tmp/1.txt     # ---------
+        chmod 755 /tmp/1.txt   # rwxr-xr-x
+
+        修改目录及目录下所有文件的权限
+            chmod 755 /tmp -R
+
+
+    修改所属用户及用户组     chown
+        必须root才能修改
+
+        chown 用户:用户组 文件路径 [-R]
+
+        chown kyo:sudo /tmp/1.txt
+
+    权限掩码
+        创建文件默认权限: 0666
+        创建文件夹默认权限: 0777
+
+        默认权限与掩码进行异或, 得出真实创建文件或文件夹的权限
+        影响创建文件或文件夹的默认权限
+        修改只是临时，只影响当前进程
+
+        umask       查看当前权限掩码
+            0777 111 111 111        异或
+            0002 000 000 010
+                 111 111 101
+
+        umask 0077  修改当前权限掩码
+
+    粘贴位
+        只针对其它用户设置, 只针对目录, 为了防止其它人删除目录里不属性自己的文件或目录
+
+        设置粘贴位:
+            chmod o+t /tmp/test
+
+        取消粘贴位:
+            chmod o-t /tmp/test
+
+
+    特权位
+        只针对用户和用户组设置, 一般的应用场景针对可执行二进制文件设置
+
+        针对可执行二进制文件, 设置特权位, 效果是运行此文件的执行权限为所属用户
+
+        加了用户特权位， 此文件运行权限为文件所属用户
+            chmod u+s touch
+
+        加了组特权位， 此文件运行权限为文件所属用户组
+            chmod g+s touch
+
+        例1: passwd命令(/etc/shadow)
+
+        例2: su命令
+
+        例3: tom用户指定mary可以在tom目录下创建文件
+            mkdir /tmp/test/{tom,mary} -p
+            sudo chown tom:tom /tmp/test/tom -R
+            sudo chown mary:mary /tmp/test/mary -R
+            sudo chmod 700 /tmp/test/{mary,tom} -R
+            sudo cp /usr/bin/touch /tmp/test/mary/tomCreate
+            sudo chown tom:tom /tmp/test/mary/tomCreate
+            sudo chmod a+x /tmp/test/mary/tomCreate
+            sudo chmod u+s /tmp/test/mary/tomCreate
+
+            su - mary
+                /tmp/test/mary/tomCreate /tmp/test/tom/mary.file
+
+    针对目录的特权位
+        只能对目录设置组特权,
+        任何用户在此目录创建文件的所属用户组为目录的所属用户组
+
+    文件特殊属性
+        查看文件的特殊属性
+            lsattr 文件路径
+
+        修改文件的特殊属性
+            chattr +a 文件路径
+                无法进行编辑和删除
+
+            chattr -a 文件路径
+
+            防止其它程序更改文件, 把控制权全部交给roo
+
+-------------------------------------------------------------------------------
+作业:
+    手工创建用户
+        不用useradd/adduser创建用户
+        可以图形登录
+        没有任何错误(登录和打开终端)
+        ~能正确显示, 并且cd ~ 能正确进入用户家目录
+        可以正常使用sudo命令
+
+        提示: 用户默认配置文件(/etc/skel/*)
+
+        扩展: 实现adduser命令功能
+
+        手工创建test用户的流程:
+            编辑/etc/passwd添加以下信息
+                test:x:1004:1004:test:/home/test:/bin/bash
+
+            编辑/etc/shadow添加以下信息
+                test:$6$GopNDbDC$Db2No.lDrGX4d55qGLdTZYktVEuPfaIdZldbolEK67HlR4OKnFqByJv5zz6U1Ut1r0T7bk1nrHeix//.KjcuT/:17749:0:99999:7:::
+
+                密码生成:
+                    查看密码生成信息的帮助: man 3 crypt
+
+                    $6$GopNDbDC$Db2No.lDrGX4d55qGLdTZYktVEuPfaIdZldbolEK67HlR4OKnFqByJv5zz6U1Ut1r0T7bk1nrHeix//.KjcuT/
+
+                    $6          代表加密算法(1=>md5, 5=>sha256, 6=>sha512)
+                    $GopNDbDC   盐值
+                    最后一段为真正密码加密字符串(使用指定的算法对盐值和真实密码一起加密的字符串)
+
+                    openssl passwd -1 -salt "8位盐值" -stdin <<< "密码"
+                        盐值为自定义组合的字符串(字母和数字)
+
+                    自动生成盐值
+                        tr -dc '[:alnum:]' < /dev/urandom | head -c 8
+
+            编辑/etc/group添加以下信息
+                test:x:1004:
+
+            编辑/etc/gshadow添加以下信息
+                test:!::
+
+            创建家目录
+                sudo mkdir /home/test
+
+            复制用户参考配置文件(默认配置文件)
+                sudo cp /etc/skel/.{bashrc,profile} /home/test/
+
+            更改家目录的权限
+                sudo chown test:test /home/test -R
+                sudo chmod 700 /home/test -R
+
+            sudo授权
+                sudo -i
+                echo 'test	ALL=(ALL:ALL) ALL' >> /etc/sudoers
+
+-------------------------------------------------------------------------------
+在线用户查看 users/who/w
+
+-------------------------------------------------------------------------------
+命令行浏览网页
+    sudo apt install w3m -y
+
+    w3m http://3.3.3.9/kyo/linux/0_linux.txt
+
+视频播放器
+    sudo apt install mplayer -y
+
+    mplayer 1.mp4
+        o
+        q
+        空格
+        左右方向键
+
+

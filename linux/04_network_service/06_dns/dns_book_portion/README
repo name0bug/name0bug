@@ -1,0 +1,32 @@
+Book name: DNS and BIND, 4th Edition
+by Paul Albitz and Cricket Liu
+ISBN: 0-596-00158-4
+Fourth edition, published April 2001.
+(See the catalog page for this book.)
+
+Table of Contents
+Copyright Page
+Preface
+Chapter 1: Background
+Chapter 2: How Does DNS Work?
+Chapter 3: Where Do I Start?
+Chapter 4: Setting Up BIND
+Chapter 5: DNS and Electronic Mail
+Chapter 6: Configuring Hosts
+Chapter 7: Maintaining BIND
+Chapter 8: Growing Your Domain
+Chapter 9: Parenting
+Chapter 10: Advanced Features
+Chapter 11: Security
+Chapter 12: nslookup and dig
+Chapter 13: Reading BIND Debugging Output
+Chapter 14: Troubleshooting DNS and BIND
+Chapter 15: Programming with the Resolver and Name Server Library Routines
+Chapter 16: Miscellaneous
+Appendix A: DNS Message Format and Resource Records
+Appendix B: BIND Compatibility Matrix
+Appendix C: Compiling and Installing BIND on Linux
+Appendix D: Top-Level Domains
+Appendix E: BIND Name Server and Resolver Configuration
+Index
+Colophon

@@ -1,0 +1,15 @@
+[mysqld]
+datadir=/dev/shm/db_src/data
+socket=/dev/shm/db_src/mysql.sock
+pid-file=/dev/shm/db_src/mysqld.pid
+log-error=/dev/shm/db_src/mysqld.log
+log-bin=/dev/shm/db_src/binlog/binlog
+port=3310
+user=mysql
+innodb_log_group_home_dir=/dev/shm/db_src/innodb/log
+innodb_log_files_in_group=3
+innodb_data_home_dir=/dev/shm/db_src/innodb/data
+innodb_data_file_path=data1:50M;data2:20M:autoextend
+innodb_file_per_table=0
+
+[mysqld_safe]

@@ -1,0 +1,63 @@
+#!/bin/bash
+
+isNum() {
+    egrep -q "^[0-9]+$" <<< "$1" && return 0 || return 1
+}
+
+kyo_rand() {
+    local start=$1
+    local end=$2
+
+    if test -z "$start" ; then
+        echo $RANDOM
+    elif test -z "$end"; then
+        echo $[RANDOM % start]
+    else
+        echo $[RANDOM % (end - start + 1) + start]
+    fi
+}
+
+isYear() {
+    local year=${1}
+
+    isNum $year || return 2
+
+    (($year % 400 == 0 || $year % 4 == 0 && $year % 100 != 0)) \
+        && return 0 || return 1
+}
+
+count_year_days() {
+    local sy="$1" ey="$2" days=0
+
+    isNum $sy || return 1
+    isNum $ey || return 2
+
+    while [ $sy -lt $ey ] ; do
+        isYear $sy && let days+=366 || let days+=365
+        let sy++
+    done
+
+    echo $days
+}
+
+count_month_days() {
+    local MonthDay=(0 31 28 31 30 31 30 31 31 30 31 30 31)
+    local year="$1" month="$2" days=0 mday
+
+    isNum $year || return 1
+    isNum $month || return 2
+
+    if [ "$month" -ge 3 ] ; then
+        isYear $year && let days++
+    fi
+
+    while [ $month -gt 1 ]; do
+        let month--
+
+        mday=${MonthDay[$month]}
+        let days+=mday
+    done
+
+    echo $days
+}
+

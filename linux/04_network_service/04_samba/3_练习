@@ -1,0 +1,68 @@
+一、配置一个基本的samba 共享
+1. 编辑配置文件，增加一个共享
+vi /etc/samba/smb.conf
+[software]
+    comment         = good software
+    path            = /soft
+    guest ok        = yes
+    browseable      = yes
+    writeable       = no
+2. 创建共享目录
+mkdir /soft
+
+3. 启动/重启服务
+service smb restart
+
+4. 列出共享，登录共享
+smbclient -L //10.1.2.3
+smbclient //10.1.2.3/software
+
+
+二、禁止用户登录自己的家目录
+把配置文件中Home 共享的相关行注释掉
+#[homes]
+#       comment = Home Directories
+#       browseable = no
+#       writable = yes
+smbclient -L //10.1.2.3 -U u1
+
+
+
+三、按照以下要求创建一个共享：
+用户u1 和属于smb组的用户可以上传下载  (valid users = u1,u2,+smb, write list = xxxx)
+    groupadd smb        <-- 创建用户
+    gpasswd -a u1 smb   <-- 把用户加入组中
+用户u2 只能下载不能上传               (writeable = no)
+用户u2 能下载所有人上传的文件
+用户u2 不能下载 u1 上传的文件         (给u1 单独的配置文件，在其中修改上传文件的权限）
+用户之间不能删除别人上传的文件        (chmod o+t)
+该共享不显示在共享列表中              (browseable = no)
+只允许来自10.1.1.0/24中的客户端，但其中要排除10.1.1.1这台主机 (host deny/allow)
+拒绝匿名用户和其它用户访问            (guest ok = no)
+
+----- 参考配置 -----
+主配置文件 /etc/samba/smb.conf 的写法：
+
+[global]
+    config file = /etc/samba/smb.conf.%U
+    ;... global 部分的其它设置省略
+
+[share]
+    comment         = Share data
+    path            = /tmp/share
+    valid users     = u1,u2,+smb
+    write list      = u1,+smb
+    read list       = u2
+    browseable      = No
+    hosts allow     = 10.1.1.0/255.255.255.0 except 10.1.1.1
+
+u1 用户专用的配置文件/etc/samba/smb.conf.u1 的写法：
+[share]
+    comment             = Share data
+    path                = /tmp/share
+    valid users         = u1
+    write list          = u1
+    browseable          = No
+    hosts allow         = 10.1.1.0/255.255.255.0 except 10.1.1.1
+    create mode         = 0400
+    force create mode   = 0400

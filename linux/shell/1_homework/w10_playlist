@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# for line in $(cat /tmp/playlist) ; do
+    # echo ${RANDOM}_$line
+# done | sort -n | sed -rn 's/^[0-9]+_//p'
+
+while read line ; do
+    echo ${RANDOM}_$line
+done < /tmp/playlist | sort -n | sed -rn 's/^[0-9]+_//p'

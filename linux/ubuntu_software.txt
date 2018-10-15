@@ -1,0 +1,74 @@
+源配置:
+    deb http://mirrors.163.com/ubuntu/ xenial main restricted universe multiverse
+    deb http://mirrors.163.com/ubuntu/ xenial-security main restricted universe multiverse
+    deb http://mirrors.163.com/ubuntu/ xenial-updates main restricted universe multiverse
+    deb http://mirrors.163.com/ubuntu/ xenial-proposed main restricted universe multiverse
+    deb http://mirrors.163.com/ubuntu/ xenial-backports main restricted universe multiverse
+    deb-src http://mirrors.163.com/ubuntu/ xenial main restricted universe multiverse
+    deb-src http://mirrors.163.com/ubuntu/ xenial-security main restricted universe multiverse
+    deb-src http://mirrors.163.com/ubuntu/ xenial-updates main restricted universe multiverse
+    deb-src http://mirrors.163.com/ubuntu/ xenial-proposed main restricted universe multiverse
+    deb-src http://mirrors.163.com/ubuntu/ xenial-backports main restricted universe multiverse
+
+    复制以上内容到/etc/apt/sources.list
+    sudo apt-get update
+
+    下载的包放在/var/cache/apt/archives 下
+-------------------------------------------------------------------------------
+dpkg
+    dpkg -i deb包路径               安装deb包
+    dpkg -R deb包所在目录路径       安装某目录下所有deb包
+    dpkg -r 包名                    删除某个deb包 保留配置信息
+    dpkg -P 包名                    删除某个deb包 包括配置信息
+    dpkg -l                         列出本系统安装的所有包列表
+    dpkg -l vim                     查询本系统安装的所有包中vim的信息
+    dpkg -c deb包路径               查看deb包释放所有文件路径
+    dpkg -L 包名                    查看已安装的deb包释放所有文件路径
+    dpkg -p 包名                    查看已安装的deb包的详细信息
+    dpkg -S 命令                    查看命令属性哪个包
+    dpkg --configure   包名         重新配置已安装的deb包
+
+dpkg-deb                            制作deb工具
+    dpkg-deb -c             列出deb包常规文件
+    dpkg-deb -I/-f          列出deb包信息
+    dpkg-deb -W             列出deb的程序名和版本号
+    dpkg-deb -e             解压deb控制文件
+    dpkg-deb -x             解压deb的常规文件
+    dpkg-deb -X             解压deb常规文件并列表显示出来
+    dpkg-deb -R             解压deb包的常规文件和控制文件
+
+apt-cache
+    apt-cache stats             显示系统软件包的统计信息
+    apt-cache search 包名       到软件仓库搜索包的信息
+    apt-cache show 包名         获取对应包的信息
+    apt-cache depends 包名      查看包依赖了哪些包
+    apt-cache rdepends 包名     查看被哪些包依赖
+
+apt-get
+    apt-get update              更新仓库源
+    apt-get upgrade             更新所有已安装程序的升级
+    apt-get dist-upgrade        更新发行版本的升级
+
+    apt-get install             安装程序
+    apt-get install --reinstall 重新安装程序
+    apt-get -f install          修复安装程序
+
+    apt-get remove              删除程序 不删配置文件
+    apt-get purge               删除程序包括配置文件
+
+    apt-get source              下载源码包到当前目录
+    apt-get download            下载二进制包到当前目录
+    apt-get source -d           下载源码包到当前目录并且编译
+    apt-get build-dep           构建源码包的编译环境
+    apt-get clean               清除缓冲文件/var/cache/apt/archives/{.partial}中所有文件
+    apt-get autoclean           清除缓冲过期的包
+    apt-get autoremove          删除因依赖自动安装的包, 而现在不需要依赖
+
+apt-file        可以查找文件所属包
+    安装ap-file工具，默认没有安装:
+        sudo apt install apt-file
+    更新文件数据库
+        apt-file update
+    查找文件所属包
+        apt-file search libedit.so
+

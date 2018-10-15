@@ -1,0 +1,27 @@
+在mysql 客户端中使用vi 编辑模式
+建立文件 ~/.inputrc，内容如下：
+[root@mysql ~]# cat ~/.inputrc 
+set editing-mode vi
+$if mode=vi
+  set keymap vi-command
+  "\C-l": clear-screen
+  set keymap vi-insert
+  "\C-l": clear-screen
+$endif
+
+
+使用edit 命令来编辑mysql 指令
+1. 执行命令edit，mysql 客户端工具将会打开系统默认的编辑器（EDITOR 变量指定），用户可以在其中编辑SQL 命令
+2. 保存退出后，输入分号(;) 或者G 执行命令，输入\c 取消命令
+
+
+设置pager 分屏显示结果
+pager less          <-- 使用命令less 做分屏器
+pager less -i       <-- 给less 设置命令行参数，搜索的时候忽略大小写
+pager more          <-- 使用命令more 做分屏器
+pager               <-- 不带任何参数，则关闭分屏功能
+
+
+使用tee 命令把屏幕输出保存一份到外部文件，屏幕显示不受影响
+tee /tmp/mysql_record.log   <-- 把屏幕输出到文件 /tmp/mysql_record.log 中
+notee                       <-- 关闭tee 功能

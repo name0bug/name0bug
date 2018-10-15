@@ -1,0 +1,17 @@
+#!/bin/bash
+
+read -p "请输入多个用户名: " user1 user2 user3
+echo
+read -t 3 -n 8 -s -p "请输入密码: " passwd
+
+echo
+echo "用户名: $user1, $user2, $user3, 密码: $passwd"
+
+
+# age=$1
+
+# if test -z "$age" ; then
+    # read -p "请输入年龄: " age
+# fi
+
+# echo "用户输入的年龄: $age"

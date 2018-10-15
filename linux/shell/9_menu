@@ -1,0 +1,95 @@
+#!/bin/bash
+
+mul99() {
+    t=${1-9}
+    for i in $(seq 1 $t) ; do
+        for j in $(seq 1 $i); do
+            printf "%d x %d = %-2d " $j $i $[i * j]
+        done
+        echo
+    done
+}
+
+isNum() {
+    num=${1}
+
+    test -z "$num" && return 1
+
+    len=${#num}
+
+    for i in $(seq 0 $[len - 1]) ; do
+        case "${num:$i:1}" in
+            0|1|2|3|4|5|6|7|8|9) continue ;;
+            *) return 1 ;;
+        esac
+    done
+
+    return 0
+}
+
+# read -p "请输入测试数字: " num
+# isNum $num && echo "是" || echo "不是"
+# exit 0
+
+
+isYear() {
+    year=${1}
+
+    test -z "$year" && return 1
+
+    isNum $year || return 2
+
+    (($year % 400 == 0 || $year % 4 == 0 && $year % 100 != 0)) \
+        && return 0 || return 3
+
+    # test $[year % 400] -eq 0 && return 0
+
+    # test $[year % 4] -eq 0 -a $[year % 100] -ne 0 && return 0
+    # $[]     里面写算术表达式
+    # [ ... ]      里面条件表达式
+
+    # return 1
+}
+
+mul99 $1
+echo
+mul99 7
+
+
+while true ; do
+    echo "1. 九九乘法表"
+    echo "2. 猜数字游戏"
+    echo "3. 判断闰年"
+    echo "4. 买鸡"
+    echo "5. 黑色星期五"
+    echo "6. 打印直角三角形"
+    read -p "请输入[1 - 6, 0: 退出]: " input
+
+    echo "---------------------------------------------"
+    case "$input" in
+        0) break;;
+        1) mul99;;
+        2) ./1_homework/w2_guessNum ;;
+        3)
+            echo -ne "\t请输入年: "
+            read year
+
+            isYear $year
+
+            case "$?" in
+                1) echo -e "\t输入年为空!!" ;;
+                2) echo -e "\t输入的不是合法年份!!";;
+                3) echo -e "\t不是闰年!!";;
+                *) echo -e "\t是闰年!!";;
+            esac
+
+            ;;
+        4) echo "买鸡...";;
+        5) echo "黑色星期五...";;
+        6) echo "三角形";;
+        *) echo "非法操作!!";;
+    esac
+
+    echo "---------------------------------------------"
+
+done

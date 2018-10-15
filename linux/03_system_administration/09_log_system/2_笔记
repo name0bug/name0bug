@@ -1,0 +1,207 @@
+系统日志能记录什么信息
+系统日志用来记录系统上的各种活动的信息，包括用户登入登出，系统开机关机，客户端访问web，ftp，端口扫描，等等。这些日志可供管理员分析，以帮助排查系统故障，或者发现潜在的问题，等等。常见的几个日志文件：
+
+/var/log/secure      <-- ssh, ftp, telnet, pop3, pam等有关
+/var/log/dmesg       <-- 开机时核心检测过程中所产生的信息
+/var/log/cron        <-- 和定时任务有关的日志
+/var/log/wtmp        <-- 记录用户登录信息，二进制日志，需要用last查看
+/var/log/btmp        <-- 记录失败的用户登录信息，二进制日志，需要用lastb查看
+/var/log/lastlog     <-- 记录用户最后一次登录的信息，二进制日志，需要用lastlog查看
+/var/log/boot.log    <-- 开机过程的日志，也包含某些服务的启动日志
+/var/log/maillog     <-- mail相关
+/var/log/acpid       <-- 高级电源管理
+/var/log/yum.log     <-- yum的日志
+/var/log/messages    <-- 非常重要的日志文件，几乎所有的系统重要错误都会记录在这里
+
+
+Linux上的日志系统是一个系统服务，其他进程把日志信息发给日志服务，日志服务根据进程发来的数据的特征（服务名，级别）结合日志系统自身的配置，把信息写入相应的文件中，或者做其它的处理。
+
+
+
+
+
+
+
+日志系统提供的服务名称，和日志信息的级别
+
+日志系统提供了以下服务(facility) 可供使用
+auth
+authpriv   <-- 和权限，登录相关的信息
+cron       <-- 定时任务会使用这个
+daemon
+kern       <-- 内核信息，用户进程无法使用这个服务
+lpr
+mail       <-- 邮件系统会使用这个
+mark
+news
+syslog
+user
+uucp
+local0 到 local7
+
+
+
+日志信息分为以下级别，从上到下级别依次降低
+none       <-- none 不算是一个等级，它表示不记录服务的所有信息
+emerg      <-- 系统不可用
+alert      <-- 需要马上处理
+crit       <-- 非常严重的状况
+err        <-- 出错
+warning    <-- 警告
+notice     <-- 普通但很重要的信息
+info       <-- 普通信息
+debug      <-- 调试信息
+
+
+
+配置文件中常见的表示符号
+.          <-- 用来分隔服务和级别
+*          <-- 任何服务，或者任何级别
+=          <-- 有等号表示等于某一级别，没有等号表示大于或者等于某一级别
+!          <-- 排除操作，前面有相同服务的表达式，这个操作才有意义
+               代表从前面表达式所包含的内容中排除某些内容
+;          <-- 用于分隔不同的  服务.级别 组合
+,          <-- 用于分隔不同的服务
+-          <-- 用于指定目标文件时，代表同步写入
+
+举例：
+cron.*                               <-- cron 服务的所有级别
+*.info                               <-- 所有服务的info 及以上级别
+cron.info                            <-- . 用于连接服务和级别，表示大于或等于info级别
+cron.info;cron.!err                  <-- 分号隔开多个表达式，感叹号代表取反，结合起来代表大于或等于info，小于err
+cron.=info                           <-- 点后面的等号，代表等于info级别
+cron.info;cron.!=err                 <-- 两个表达式结合，代表大于或等于info，但不等于err
+*.warning;mail.info                  <-- 任何服务大于等于warning级别，和mail服务大于等于info级别
+mail,cron.info                       <-- mail服务大于等于info级别，和cron服务大于等于info级别
+cron.err       /var/log/cron.log     <-- 文件名前面没有减号，表示异步写入，也就是用到缓存
+mail.err       -/var/log/mail.log    <-- 文件名前面有减号，表示异步写入，也就是说rsyslog不会马上把收到的数据写入文件
+
+
+
+
+
+配置文件语法举例分析
+
+*.=crit;kern.none   /var/adm/critical
+把除了kern服务之外的所有服务中级别为crit的信息存入/var/adm/critical
+
+kern.*  /var/adm/kernel
+把kern服务的所有信息存入/var/adm/kernel
+
+kern.crit  @@10.1.1.1:514
+把kern服务crit及以上的信息发送到远程日志服务器10.1.1.1 的TCP 514端口
+
+kern.info;kern.!err  /var/adm/kernel-info
+把kern服务从info到warning的信息写入/var/adm/kernel-info
+
+mail.=info  /dev/tty12
+把所有指向mail服务的info级别的信息都输出到第12个终端
+
+mail.*;mail.!=info  /var/adm/mail
+把所有mail服务中，除info级别之外的信息，写入/var/adm/mail
+
+mail,news.=info  -/var/adm/info
+把符合mail.info 和 news.info 的信息存入/var/adm/info，而且要同步写入
+
+*.=emerg  *
+把所有级别为emerg 的信息发送给所有登录到系统上的用户
+
+*.alert root,czl
+把所有级别为alert 的信息发送给在线用户root和czl
+
+
+
+
+
+
+日志系统测试工具
+logger工具可以向syslog发送日志信息，特别适合于调试syslog配置文件，也可以用于需要记录日志的脚本。
+使用范例：
+logger -t "Logger" -p mail.info "Testing log info"
+
+
+
+
+
+
+
+
+日志轮转
+
+随着日志的增多，日志文件的尺寸会不断增大，为了方便备份，节省存储空间，可以用工具logrotate 来对各个日志文件做轮转操作。轮转操作本质上是把旧的日志文件改名，然后以旧的名字创建一个文件。
+
+
+man logrotate    <-- 搜索CONFIGURATION FILE 可以显示logrotate的范例配置文件，和各种指令的使用说明
+
+logrotate 的配置文件是 /etc/logrotate.conf，配置文件中会引用/etc/logrotate.d/ 下面的其他配置文件。
+
+
+常用的指令解释，这些指令都可以在man logrotate 中找得到。
+weekly                  <-- 每周轮转一次(monthly,
+rotate 4                <-- 同一个文件最多轮转4次，4次之后就删除该文件
+create 0664 root utmp   <-- 轮转之后创建新文件，权限是0664，属于root用户和utmp组
+dateext                 <-- 用日期来做轮转之后的文件的后缀名
+compress                <-- 用gzip对轮转后的日志进行压缩
+minsize 30K             <-- 文件大于30K，而且周期到了，才会轮转
+size 30k                <-- 文件必须大于30K才会轮转，而且文件只要大于30K就会轮转
+                            不管周期是否已到
+missingok               <-- 如果日志文件不存在，不报错
+notifempty              <-- 如果日志文件是空的，不轮转
+sharedscripts           <-- 不管有多少个文件待轮转，prerotate 和 postrotate 代码只执行一次
+delaycompress           <-- 下一次轮转的时候才压缩
+prerotate               <-- 如果符合轮转的条件
+                            则在轮转之前执行prerotate和endscript 之间的shell代码
+postrotate              <-- 轮转完后执行postrotate 和 endscript 之间的shell代码
+
+
+
+
+
+为了避免现有的日志数据被意外覆盖，通常可以给日志文件添加a 属性，这样就只能往文件尾部追加数据，而不能修改已有的数据，也不能删除文件。这只适用于通过添加的方式打开日志文件的程序，比如rsyslog。像wtmp, btmp这个两个文件就不能用这种方法。
+
+添加a属性：
+chattr +a filename
+
+删除a属性：
+chattr -a filename
+
+查看隐藏属性
+lsattr filename
+
+
+
+
+
+回顾：
+
+
+日志系统
+
+1. 可以记录什么？
+    记录文本信息
+2. 使用与什么场合？
+    记录程序在运行过程中的信息：错误信息，非错误信息
+    操作系统的信息
+3. 数据存放到什么地方？有哪些比较重要的日志文件？
+    /var/log
+4. 如何配置日志服务器？
+    /etc/rsyslog.conf
+    systemctl restart/start/stop/status rsyslog
+5. 远程日志服务器的配置
+    1. 服务器上的配置：
+        1. 配置服务器，使之接受别的主机发送过来的日志数据
+        2. 配置防火墙，允许外面主机的数据进来：配置允许，或者临时清空防火墙规则 
+    2. 客户端上：
+        @@server-ip:port
+    3. 客户端传送过来的日志数据，存放到服务端的哪个/哪些文件中？
+        这个是由服务端的配置文件控制的
+6. 为什么要对日志做轮转操作？
+    1. 减少日志文件对硬盘空间的占用
+    2. 文本日志文件的写入是附加式写入，当文件很大时，写入效率会降低
+7. 作日志轮转的命令是？配置文件在哪里？
+    logrotate
+    /etc/logrotate.conf
+    /etc/logrotate.d/*
+8. 日志轮转操作一般是以什么方式触发？
+    通过定时任务/计划任务自动触发，logrotate默认的定时任务配置文件的位置：
+    /etc/cron.daily/logrotate

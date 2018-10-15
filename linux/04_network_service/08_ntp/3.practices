@@ -1,0 +1,58 @@
+1. 设置本地ntpd服务，维护本机时间与互联网时间服务器同步
+
+    参考做法：
+
+    1. 安装
+
+        yum install ntpd
+
+    2. 获取互联网上的时间服务器
+
+        http://www.pool.ntp.org/zone/cn
+
+    3. 编辑配置文件 /etc/ntp.conf
+
+        server 0.cn.pool.ntp.org iburst
+        server 1.cn.pool.ntp.org iburst
+        server 2.cn.pool.ntp.org iburst
+        server 3.cn.pool.ntp.org iburst
+
+    4. 手动设定一次时间，这里首先设置时区，中国时间可以设置Asia/Chongqing
+
+        timedatectl set-timezone Asia/Chongqing
+        ntpd -q
+
+    5. 启动时间服务器
+
+        systemctl start ntpd
+
+    6. 查状态
+        ntpq -p
+        timedatectl
+
+
+2. 设置ntpd服务器，为本地网络的其它主机提供时间同步服务
+
+    参考做法：
+
+    服务端：
+        1. 按照"配置ntpd用于维护本机时间"的步骤配置好一个时间服务器，假设服务器的ip是3.3.3.8
+
+        2. 修改服务器的配置文件 /etc/ntp.conf，添加以下配置，允许网段3.3.3.0/24获取时间
+
+            restrict 3.3.3.0 mask 255.255.255.0
+
+        3. 重启服务器的ntpd服务
+            systemctl restart ntpd
+
+        4. 配置防火墙，允许访问 123 端口
+            给防火墙添加规则，允许访问123端口：
+                iptables -I INPUT -p udp --dport 123 -j ACCEPT
+                iptables -I INPUT -p tcp --dport 123 -j ACCEPT
+            或者，也可以关闭防火墙功能：
+                systemctl stop firewalld
+                systemctl disable firewalld
+
+    客户端：
+        1. 按照"配置ntpd用于维护本机时间"的步骤配置客户端，
+           时间服务器写刚刚配置好的服务器的ip，就是3.3.3.8

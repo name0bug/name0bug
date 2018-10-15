@@ -1,0 +1,164 @@
+零、操练loop设备的使用
+
+1. 创建一个空白文件
+
+    fallocate -l 10M /root/disk
+
+    或者
+
+    head -c 10M /dev/zero > /root/disk
+
+2. 找出可用的loop设备，这里假设找到了loop0可用
+    losetup -f
+
+3. 在loop0和 /root/disk 之间建立映射关系
+
+    losetup /dev/loop0 /root/disk
+
+4. 列出所有的映射
+
+    losetup -a
+
+5. 在块设备上创建文件系统，挂载，写入文件，卸载，查找数据
+
+    mkfs.ext2 /dev/loop0
+    mkdir /mnt/disk
+    mount /dev/loop0 /mnt/disk
+    echo "hello loop" > /mnt/disk/data
+    umount /mnt/disk
+    grep "hello loop" /root/disk    <-- 应能看到匹配
+
+6. 解开映射，然后再次查看映射关系
+
+    losetup -d
+    losetup -a
+
+
+
+一、练习dump和restore，并验证dump level 对备份的内容的影响
+1. 创建一个空白的二进制文件
+[root@mob backup]# head -c 100m /dev/zero > /root/disk
+
+2. 把上一步创建的文件和一个loop 设备关联
+[root@mob backup]# losetup -f
+/dev/loop0
+[root@mob backup]# losetup /dev/loop0 /root/disk
+
+
+--- 接下来的操作都是针对块设备loop0，loop0 相当于一个硬盘分区
+
+3. 在loop0 上面创建文件系统
+mkfs.ext2 /dev/loop0
+
+4. 挂载该文件系统
+mkdir /mnt/disk
+mount /dev/loop0 /mnt/disk
+
+5. 创建用来存放备份文件的目录
+mkdir /dev/shm/backup
+
+
+--- 下面开始创建文件，备份文件，查看备份等操作
+
+6. 创建文件，备份文件
+touch /mnt/disk/data1
+dump -0u /dev/loop0 -f /dev/shm/backup/dump0
+
+touch /mnt/disk/data2
+dump -3u /dev/loop0 -f /dev/shm/backup/dump3
+
+touch /mnt/disk/data3
+dump -2u /dev/loop0 -f /dev/shm/backup/dump2
+
+touch /mnt/disk/data4
+dump -5u /dev/loop0 -f /dev/shm/backup/dump5
+
+touch /mnt/disk/data5
+dump -4u /dev/loop0 -f /dev/shm/backup/dump4
+
+7. 查看上一步所创建的5个备份文件，确认备份正确无误
+restore -tf /dev/shm/backup/dump0
+restore -tf /dev/shm/backup/dump3
+restore -tf /dev/shm/backup/dump2
+restore -tf /dev/shm/backup/dump5
+restore -tf /dev/shm/backup/dump4
+
+8. 恢复数据
+
+    1. 预备新的硬盘，这里直接用loop设备来模拟新硬盘
+
+        head -c 100M /dev/zero > /root/disk_new
+        losetup -f                                  <-- 假设找到的是loop1
+        losetup /dev/loop1 /root/disk_new
+        mkfs.ext2 /dev/loop1
+        mkdir /mnt/disk_new
+        mount /dev/loop1 /mnt/disk_new
+
+    2. cd进入新的文件系统的根目录
+
+        cd /mnt/disk_new
+
+    3. 确定恢复链。这里假设需要恢复到dump5的位置，那么恢复链就是：
+
+        5 -> 2 -> 0，反过来就是 0 -> 2 -> 5，于是最终恢复的顺序就是 0 -> 2 -> 5
+
+    4. 恢复
+
+        restore -rf /dev/shm/backup/dump0
+        restore -rf /dev/shm/backup/dump2
+        restore -rf /dev/shm/backup/dump5
+
+
+
+二、创建快照逻辑卷，验证原逻辑卷变化，但快照逻辑卷保持不变
+1. 创建物理卷，卷组，逻辑卷
+pvcreate /dev/loop2
+vgcreate db /dev/loop2
+lvcreate -n oracle -L 100M db
+
+2. 创建文件系统，挂载，使用
+mkfs.ext2 /dev/db/oracle 
+mkdir /mnt/oracle
+mount /dev/db/oracle /mnt/oracle
+touch /mnt/oracle/file{1,2,3}       <-- 在原逻辑卷里添加文件
+
+3. 创建快照逻辑卷，测试新文件
+lvcreate -s /dev/db/oracle -n snap-oracle -L 100M
+mkdir /mnt/snap-oracle
+mount /dev/db/snap-oracle /mnt/snap-oracle
+ls -l /mnt/snap-oracle/             <-- 应能看到file1, file2, file3
+touch /mnt/oracle/file_new          <-- 在原逻辑卷里添加文件file_new
+ls -l /mnt/snap-oracle/             <-- 在快照里看不到新创建的文件
+
+4. 删除快照逻辑卷
+lvremove -f /dev/db/snap-oracle
+
+
+
+
+三、为mysql 数据库设计一个备份计划，以一个星期为周期，和lvm快照逻辑卷结合进行操作
+思路：
+1. 列出需要备份的文件系统   (/dev/datavg/myslq)
+2. 确定快照逻辑卷的命名方式 ([oldname]-snap)
+3. 确定备份文件的存放位置   (/mysql-backup)
+4. 根据工作日来确定备份级别
+5. 确定自动运行的时间
+6. 书写shell 脚本
+7. 可以根据需要先做一个全备
+
+需要备份的文件系统：
+/dev/db/mysql --> /dev/db/snap_mysql
+
+存放的位置：
+/backup
+
+备份级别的确定
+一 二 三 四 五 六 日
+1  2  3  4  5  6  0
+
+运行时间
+02:30
+
+
+
+

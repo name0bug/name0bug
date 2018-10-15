@@ -1,0 +1,10 @@
+#!/bin/bash
+
+read -p "请输入循环次数: " num
+
+s=1
+while [ $s -le $num ] ; do
+    echo "hello - "$s
+    # num=$[num - 1]
+    let s++
+done

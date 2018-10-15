@@ -1,0 +1,151 @@
+dump 用于备份整个文件系统，支持完全备份和增量备份，支持ext2/ext3/ext4。用dump创建的备份，可以用工具restore来读取和恢复。
+
+
+
+
+备份级别
+dump有个叫做[备份级别]的概念，备份级别分为0级别和大于零的级别，0级别代表完全备份，大于零的级别代表增量备份。级别是确定增量起始点的一个依据，dump工具用它来确定在哪一次备份的基础之上计算增量，举例如下：
+
+日期：      周一 周二 周三 周四
+备份的级别： 0    3    2    5
+                            |
+             ?    ?    ?    |
+             ^    ^    ^    |
+             |____|____|____|
+
+假设曾经在周一，周二，周三这三天做过备份，备份的级别分别是0，3，2，那么，如果在周四那天需要做一个级别为5的备份，dump工具是如何确定从哪一次备份的基础上做增量备份的呢？它会按时间从最近的一次备份往前查找（上图中为从周三往周一的方向查找），找一个级别比现在将要执行的备份级别（上图中为级别5）低的备份，按照上图，将会找到周三。
+
+dump 是怎么知道周三曾经做过一个级别为2的备份的呢？靠的是文件/etc/dumpdates，该文件的格式如下：
+
+[root@lab dump]# cat /etc/dumpdates 
+/dev/sda1 0 Mon May 12 22:21:04 2014 +0800  <-- 备份的设备，级别（0级别），时间
+/dev/sda1 1 Mon May 12 21:52:37 2014 +0800  <-- 备份的设备，级别（1级别），时间
+
+
+
+
+
+
+
+---- dump的使用
+
+dump -0u /mysql -f /data/backup/dump0 -L "Initial dump"
+对挂载到/mysql的设备做一个完全备份，备份到文件/data/backup/dump0 中，标签是"Initial dump"
+
+dump -1u /mysql -f /data/backup/dump1
+对挂载到/mysql的设备做一个1级别的备份，备份到文件/data/backup/dump1 中
+
+
+
+
+
+---- restore 的使用
+
+列出备份文件/data/backup/dump0 中的内容
+[root@mob backup]# restore -t -f /data/backup/dump0
+Dump   date: Sat Jul 12 21:18:01 2014
+Dumped from: the epoch
+Level 0 dump of /dev/shm/data on mob.lab.net:/dev/loop1
+Label: none
+         2  .       <-- 左边是inode 号码，右边是文件名
+        11  ./0
+
+restore -r -f /data/backup/dump0
+把备份文件/data/backup/dump0 中的所有文件恢复到当前目录
+
+restore -i -f /data/backup/dump0
+进入互动模式，可以选择性恢复某些文件
+
+
+
+
+
+
+验证dump的备份级别对备份结果的影响
+
+1. 创建一系列的备份, 备份级别顺序: 0 3 2 5 4 7 6 1 3 2 5 4 7 6 1
+    head -c 1m /dev/zero > f0
+    dump -0u /path/ -f /backup/dump0_l0 -L "Initial dump"
+    ...
+
+2. 查看每个备份文件中的内容
+
+
+
+
+
+
+
+
+
+dump存在一个问题，如果在dump在读取某个文件的过程中文件发生了改变，那么dump备份出来的文件可能是损坏的。事实上这是所有备份工具都面临的问题。根据前面所学的lvm的知识，我们可以用dump和lvm的快照逻辑卷相结合，解决dump的这个问题。
+
+1. 首先，在初期部署的时候就必须把需要做备份的数据存放在逻辑卷上。
+
+2. 开始备份前，为将要备份的的逻辑卷创建一个快照逻辑卷
+    快照逻辑卷的尺寸应能满足在备份过程中/dev/data/mysql的数据增长的需求
+    如果备份需要30分钟才能完成，而30分钟内/dev/data/mysql将会增长1G，那就给快照分配超过1G的空间。
+    假设将要备份/dev/data/mysql, 则用下面命令为它创建一个快照
+    lvcreate -n mysql-snapshot -s /dev/data/mysql -L 300M
+
+    /dev/data/mysql
+    /dev/data/mysql-snapshot
+
+3. 备份快照就可以达到备份/dev/data/mysql的目的
+    dump -0u /dev/data/mysql-snapshot -f /backup/dump0_l0 -L "Initial dump"
+
+4. 备份完成后，要尽快删除快照逻辑卷
+    lvremove /dev/mapper/mysql-snapshot
+
+
+
+
+增量备份对选择文件的影响
+
+1. 假设当前文件系统有以下文件：
+
+    file1
+
+2. 做一次全量备份 backup0，那么backup0里面将会包含以下文件：
+
+    file1
+
+3. 文件系统当前的文件发生了变化，如下：
+
+    file1       <-- 文件不变
+    file2       <-- 新增的文件
+
+4. 基于backup0 做一次增量备份backup1，那么backup1里面将会包含以下文件：
+
+    file2
+
+5. 文件系统当前的文件发生了变化，如下：
+
+    file1       <-- 文件变大了
+    file2       <-- 文件变小了
+
+6. 基于backup0 做一次增量备份backup2，那么backup2里面将会包含以下文件：
+
+    file1
+    file2
+
+7. 文件系统当前的文件发生了变化，如下：
+
+    file1       <-- 文件不变
+    file2       <-- 文件不变
+    file3       <-- 新增文件
+
+8. 基于backup2 做一次增量备份backup3，那么backup3里面将会包含以下文件：
+
+    file3
+
+
+
+loop(回环设备)设备
+
+通过loop设备，可以把常规文件当作块设备使用。
+
+losetup -a                  <-- 列出所有的映射
+losetup -f                  <-- 查找下一个可用的loop设备
+losetup /dev/loop0 disk     <-- 映射
+losetup -d                  <-- 解开映射

@@ -1,0 +1,279 @@
+练习一
+1. 把网站家目录设置为/www
+2. 允许列出网站根目录里面的内容
+3. 不允许列出网站根目录下面的子目录secret 里面的内容
+4. 不允许访问所有目录下的.jpg 文件，但是images 目录除外
+
+参考配置
+DocumentRoot "/www"
+<Files ~ "\.jpg$">
+        Order allow,deny
+        Require all denied
+</Files>
+<Directory "/www">
+        Options Indexes
+        Order deny,allow
+        Require all granted
+</Directory>
+<Directory "/www/secret">
+        Options -Indexes
+</Directory>
+<Directory "/www/images">
+        <Files ~ "\.jpg$">
+                Order deny,allow
+                Require all granted
+        </Files>
+</Directory>
+
+
+
+练习二
+
+用密码来保护 /books 路径
+1. 书写配置
+<Location "/books">
+    options Indexes FollowSymLinks
+    order allow,deny
+    allow from all
+    authname "Authenticate yourself"
+    authtype basic
+    authuserfile /etc/httpd/userpasswd
+    require valid-user
+</Location>
+
+2. 创建用户
+# htpasswd -c /etc/httpd/userpasswd u1
+
+3. 重启 httpd 服务
+
+
+
+
+练习三、操练虚拟主机的配置
+
+1. 配置两个虚拟主机，名字分别是:
+    web1.abc.com
+    web2.abc.com
+2. 文档根目录分别如下，要求其中的index.html文件显示不同的内容
+    /www/web1
+    /www/web2
+3. 通过DNS服务器解析两个域名
+
+
+参考步骤：
+
+0. 本方案基于以下假设：
+    DNS服务器IP：3.3.3.10
+    httpd服务器IP：3.3.3.8
+    虚拟主机 web1.abc.com 的文档根目录：/www/web1
+    虚拟主机 web2.abc.com 的文档根目录：/www/web2
+
+1. 配置DNS，设定以下的域名与IP的映射，假设httpd服务器的IP地址是3.3.3.8：
+    web1.abc.com        3.3.3.8
+    web2.abc.com        3.3.3.8
+2. 在客户端配置 /etc/resolv.conf 文件，然后测试DNS可以正常解析，并且主机能够连通：
+    # vi /etc/resolve.conf, 删除里面原有内容，添加以下一行
+        nameserver 3.3.3.10
+    # dig web1.abc.om
+    # ping web1.abc.com
+3. 编辑httpd的配置文件 /etc/httpd/conf/httpd.conf，在尾部添加以下内容：
+
+    NameVirtualHost *:80
+    <VirtualHost *:80>
+        DocumentRoot /www/web1
+        ServerName web1.abc.com
+        <Location />
+            options Indexes
+            order deny,allow
+            allow from all
+        </Location>
+    </VirtualHost>
+    <VirtualHost *:80>
+        DocumentRoot /www/web2
+        ServerName web2.abc.com
+        <Location />
+            options Indexes
+            order deny,allow
+            allow from all
+        </Location>
+    </VirtualHost>
+4. 在两个虚拟主机的文档根目录下创建 index.html文件，内容分别如下：
+    # /www/web1/index.html
+        <h2>Web1</h2>
+
+    # /www/web2/index.html
+        <h2>Web2</h2>
+
+5. 重启httpd服务器
+    systemctl restart httpd
+
+6. 在客户端，分别打开以下网址，查看内容是否不同：
+    http://web1.abc.com
+    http://web2.abc.com
+
+
+
+
+
+
+
+
+综合实验
+
+要求：
+1. 关闭iptables，关闭SELinux
+2. 把文件系统目录 /www 设为网站根目录
+3. 把网站默认主页名称设为 index.html
+4. 网站根目录允许列目录功能(Indexes)
+5. 在网站根目录下面创建文件 main.do, 内容为 "main page" （不包含双引号）
+6. 在网站根目录下面创建一个目录 special，只允许IP 为10.1.1.1 和 本机127.0.0.1 访问
+7. 在网站根目录下面创建空文件 special/data
+8. 网站里面所有（除了第9步中的目录）扩展名为.jpg, .png 的文件，禁止所有人访问
+9. 在网站根目录下面创建一个目录 images，里面扩展名为 .png 的文件允许所有人访问
+10. 在网站根目录下面创建以下空文件
+    file.jpg
+    file.png
+    file.bmp
+    images/file.jpg
+    images/file.png
+11. 在文件系统上创建一个目录 /www_admin, 用别名的方式把该目录映射成网站路径 /admin，该路径允许列目录功能
+12. 在文件系统上创建空文件 /www_admin/data
+13. 在网站根目录下面创建一个目录 secret，里面的内容需要提供用户名和密码才能访问，用户名和密码都设置成 abc
+14. 在文件系统上创建文件 /www/secret/data, 内容为 "secret message"（不包含双引号）
+15. 在网站根目录下创建一个软连接，指向系统目录 /etc，使得可以通过网址 http://10.1.1.100/etc/fstab 的形式来访问文件 /etc/fstab, /etc 下的其它文件不允许访问
+
+
+
+
+预期效果
+
+假设服务器IP 地址为 10.1.1.100
+1. 访问http://10.1.1.100 能列出网站根目录，看到文件main.do
+2. 访问http://10.1.1.100/main.do 能看到内容 "main page"（不包含双引号）
+3. 只有本机IP 和老师的IP 10.1.1.1 才能访问http://10.1.1.100/special
+4. 访问http://10.1.1.100 看到的图片文件只有file.bmp
+5. 访问http://10.1.1.100/images 看到的图片文件只有file.png
+6. 访问http://10.1.1.100/admin/ 能看到文件列表，里面有文件data
+7. 访问http://10.1.1.100/secret/data 需要用户名和密码，输入用户名abc 和密码abc 后能看到内容 "secret message"（不包含双引号）
+8. 可以访问http://10.1.1.100/etc/fstab
+9. 不能访问http://10.1.1.100/etc/passwd
+
+
+
+
+
+参考配置（只包含修改/增加的部分）
+DocumentRoot "/www"
+
+<Directory "/www">
+    Options Indexes FollowSymLinks
+    AllowOverride None
+    Order allow,deny
+    Allow from all
+</Directory>
+
+DirectoryIndex index.html
+
+<Directory "/www/special">
+    order deny,allow
+    deny from all
+    allow from 10.1.1.1 127.0.0.1
+</Directory>
+
+<Files ~ "\.(jpg|png)$">
+    order allow,deny
+    deny from all
+</Files>
+
+<Directory "/www/images">
+    <Files ~ "\.png$">
+        order deny,allow
+        allow from all
+    </Files>
+</Directory>
+
+Alias /admin "/www_admin"
+
+<Directory "/www_admin">
+    Options Indexes
+    Order deny,allow
+    Allow from all
+</Directory>
+
+# 除了以下的配置之外，还需要创建用户
+# 可以使用以下命令来创建用户：
+# htpasswd -c /etc/httpd/userpasswd abc
+#
+<Directory "/www/secret">
+    authname "Authenticate yourself"
+    authtype basic
+    authuserfile /etc/httpd/userpasswd
+    require valid-user
+</Directory>
+
+<Directory "/www/etc">
+    Order allow,deny
+    Deny from all
+    <Files ~ "^fstab$">
+        order deny,allow
+        allow from all
+    </Files>
+</Directory>
+
+
+--------- end of 综合实验 ------------------------------------------------
+
+
+
+
+
+
+
+虚拟主机实验
+
+创建两个基于域名的虚拟主机，以IP 地址为 10.1.1.33 的同学为例，虚拟主机的信息如下：
+第一个：
+域名：host33a.teaching.net
+虚拟主机根目录：/vhost/hostA
+虚拟主机根目录禁止列目录功能(-Indexes)
+虚拟主机默认主页名称为 main.do
+创建文件 /vhost/hostA/main.do，文件内容为 hostA
+
+第二个：
+域名：host33b.teaching.net
+虚拟主机根目录：/vhost/hostB
+虚拟主机根目录禁止列目录功能(-Indexes)
+虚拟主机默认主页名称为 main.do
+创建文件 /vhost/hostB/main.do，文件内容为 hostB
+
+把两个域名host33a.teaching.net, host33b.teaching.net 的解析条目加入到/etc/hosts 中
+
+
+
+
+预期效果
+1. 访问http://host33a.teaching.net 能看到 hostA
+2. 访问http://host33b.teaching.net 能看到 hostB
+
+
+
+
+参考配置（只包含修改/增加的部分）
+NameVirtualHost *:80
+<VirtualHost *:80>
+    DocumentRoot /vhost/hostA
+    ServerName host33a.teaching.net
+    <Directory "/vhost/hostA">
+        options -Indexes
+    </Directory>
+    DirectoryIndex main.do
+</VirtualHost>
+<VirtualHost *:80>
+    DocumentRoot /vhost/hostB
+    ServerName host33b.teaching.net
+    <Directory "/vhost/hostB">
+        options -Indexes
+    </Directory>
+    DirectoryIndex main.do
+</VirtualHost>
+

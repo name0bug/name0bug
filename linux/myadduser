@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# 1. 使用脚本让所有创建用户相关命令一起执行(固定创建一个用户)
+# 2. 使用脚本创建指定用户
+# 3. 问题一: uid不能固定
+    # a). 通过脚本参数来指定UID
+    # b). 自动生成UID(生成最小可用的UID)
+        # 用户没有指定则自动生成
+        # 用户指定的UID，则报错提示
+# 4. 问题二: uid和gid需要分开判断
+    # a). 用户指定的GID存在， 则加入此组， 不需要创建新组
+
+# 5. 问题三: 密码可以用户自定义
+    # 用户密码可指定明文和密文
+    # 用户指定密码， 则使用用户密码， 不指定则自动生成并且输出提示
+
+# 6. 问题四： 家目录也可用户指定或自动生成
+
+# 7. 问题五: sudoers文件追加的内容， 没有清理和判断
+
+# 8. 问题六: 支持批量创建用户
+    # 用户名有规律， 密码统一
+    # 用户名没规律， 密码不统一
+
+uid=$(tail -n 1 /etc/passwd | cut -d ":" -f3)
+
+uid=$[uid + 1]
+
+echo "正在添加用户..."
+echo "$1:x:$uid:$uid:test:/home/$1:/bin/bash" >> /etc/passwd
+
+echo "正在设置用户密码..."
+echo "$1:\$1\$12345678\$XM4P3PrKBgKNnTaqG9P0T/:17749:0:99999:7:::" >> /etc/shadow
+
+echo "正在添加组..."
+echo "$1:x:$uid:" >> /etc/group
+
+echo "正在设置组密码..."
+echo "$1:!::" >> /etc/gshadow
+
+echo "正在构建家目录..."
+cp /etc/skel/ /home/$1/ -rfapu
+chown $1:$1 /home/$1 -R
+chmod 700 /home/$1 -R
+
+echo "正在sudo授权用户..."
+echo "$1	ALL=(ALL:ALL) ALL" >> /etc/sudoers
+

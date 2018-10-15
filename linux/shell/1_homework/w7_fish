@@ -1,0 +1,18 @@
+#!/bin/bash
+
+source libs
+
+year=2000
+month=1
+
+read -p "请输入年月日: " day
+
+ydays=$(count_year_days 2000 $year)
+mdays=$(count_year_days $year $month)
+
+days=$[(ydays + mdays + day - 1) % 5]
+
+
+(($days < 3)) && echo "打鱼" || echo "晒网"
+
+

@@ -1,0 +1,98 @@
+一、操练 FTP 的使用
+掌握右列的操作：登录，退出，列目录，进入某个远程目录，进入某个本地目录，上传，下载，使用二进制传输类型，使用被动/主动数据传输模式，列出可用的命令，查看某个命令的帮助信息，显示调试信息
+
+请按以下步骤操练，右边括号中是相关的参考命令和帮助信息
+1. 用匿名用户登录ftp 服务器3.3.3.9 （ftp 3.3.3.9, 用户名ftp 代表匿名用户，密码为空）
+2. 查看远程的当前目录 (pwd)
+3. 查看本地的当前目录 (lcd)
+4. 列出远程机的当前目录的内容 (ls)
+5. 下载远程机当前目录下的文件bash (get bash，文件将会被下载到本地的当前目录，名字不变)
+6. 下载远程机当前目录下的文件bash，放到本地/tmp 下面，改名为bash2 (get bash /tmp/bash2，文件将会被下载到本地的/tmp 下面，名字为bash2)
+7. 进入本地目录 /tmp (lcd /tmp，回到父目录的命令为 lcd ..)
+8. 下载远程机当前目录下的文件bash，放到本地当前目录下面，改名为bash3 (get bash bash3，文件将会被下载到本地的/tmp 下面，名字为bash3)
+9. 运行本地shell 命令，查看刚刚下载的文件 (!ls -l /tmp/bash*)
+10. 进入远程机的目录upload (cd upload, 回到父目录的命令为 cd ..)
+11. 设置数据传输模式为passive (passive, 看到Passive mode on 即为成功，否则就再次运行命令passive)
+12. 设置数据传输类型为二进制 (binary)
+13. 上传本机文件/etc/passwd 到远程机的当前目录，改名为passwd2 (put /etc/passwd passwd2，如果远程机上已经存在同名的文件，则会出错)
+14. 列出可用的命令 (help)
+15. 查找命令debug 的使用方法 (help debug)
+16. 开启调试信息 (debug 1)
+17. 关闭调试信息 (debug 0)
+18. 退出 (exit, 或者用快捷键Ctrl+D)
+
+
+
+
+
+
+
+
+
+二、搭建ftp服务器，要求如下：
+1. 禁止本地用户登录，只允许匿名用户登录
+2. 登录后的默认目录为/ftp_share
+3. 在默认目录下创建两个目录: pub, upload
+4. 只能上传到upload 目录，不能下载upload 里面的文件
+5. 最大传输速率为100KB/s
+6. 服务器总的连接数最大为2
+7. 每个IP的最大连接数为1
+8. 只允许10.1.1.0/24网段登录，但从中排除掉10.1.1.3，并将拒绝的信息保存到/var/log/ftp_deny.log
+9. 用ftp来做一个yum源，并利用该yum源安装gimp
+
+
+
+=============== 参考做法 ===============
+1. 关闭SELinux
+setenforce 0
+
+2. 准备目录
+mkdir -m 755 /ftp_share/
+mkdir -m 755 /ftp_share/pub
+mkdir -m 777 /ftp_share/upload
+chown -R root.root /ftp_share
+
+
+3. 设置匿名用户的家目录
+usermod -d /ftp_share ftp
+
+
+4. 配置服务器
+vi /etc/vsftpd/vsftpd.conf
+anonymous_enable=YES
+write_enable=YES
+anon_upload_enable=YES
+anon_umask=0777
+anon_max_rate=102400
+max_clients=2 max_per_ip=1
+tcp_wrappers=YES
+listen=YES
+
+
+5. 限制客户端的IP
+vi /etc/hosts.allow
+vsftpd: 10.1.1.0/255.255.255.0 EXCEPT 10.1.1.3
+
+vi /etc/hosts.deny
+vsftpd: * :spawn echo "`date`" %c >> /var/log/ftp_deny.log
+
+
+6. yum 源配置中，只需要修改baseurl 一行为以下格式
+baseurl=ftp://10.1.1.1/xxyyzz
+
+
+
+
+三、设置一个基本的ftp 服务器
+1. 允许匿名用户和本地用户登录
+2. 允许匿名用户上传文件，但是不允许创建目录
+3. 每个IP 只允许一个连接，服务器总共允许5 个连接
+4. 限制匿名用户的传输速度位100KB/s，本地用户是200KB/s
+5. 把被动连接的端口范围控制在30001至30010 之间
+
+
+四、安装vsftpd服务器，并运行起来，成功地通过ftp命令访问
+
+    1. yum install vsftpd
+    2. systemctl start vsftpd
+    3. ftp 3.3.3.9

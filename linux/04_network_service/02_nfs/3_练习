@@ -1,0 +1,63 @@
+一、配置一个简单的nfs
+
+    1. 共享目录 /data
+    2. 10.1.1.11 的用户具有只读权限
+    3. 10.1.1.12 的用户具有读写权限
+
+    参考流程：
+
+    1. 设置防火墙和SELinux
+        iptables -F
+        setenforce 0
+    2. 服务器上安装rpcbind, nfs-utils
+        yum install rpcbind nfs-utils
+        systemctl start rpcbind
+    3. 编辑配置文件 /etc/exports
+        /data 10.1.1.11(ro)
+        /data 10.1.1.12(rw)
+    4. 预备共享的目录，设置适当的权限
+        mkdir /data
+        chmod 777 /data
+    5. 应用配置
+        exportfs -arv
+        或者重启服务，重启服务有严格的顺序，如下：
+        systemctl restart rpcbind
+        systemctl restart nfs
+
+
+二、配置nfs，共享/data，要求：
+1. 10.1.1.1 IP 的用户具有只读权限
+2. 10.1.1.2 IP 的用户具有读写权限
+3. 所有用户传上来的文件，uid 是12345，gid 是12345
+4. 使用同步写入
+
+服务器上的配置
+1. 创建用户
+useradd -u 12345 mynfs
+
+2. 创建共享目录
+mkdir /data -m 700
+chown mynfs:mynfs /data
+
+3. 书写配置文件
+vi /etc/exports
+/data  10.1.1.1/32(ro,all_squash,anonuid=12345,anongid=12345,sync) 10.1.1.2/32(rw,all_squash,anonuid=12345,anongid=12345,sync)
+
+4. 使配置文件生效
+运行下面两条命令启动服务：
+service rpcbind start
+service nfs start
+
+如果服务已经运行，就可以使用以下的简单方法：
+exportfs -avr
+
+
+客户机上面的操作
+1. 列出服务器的共享目录
+showmount -e 10.1.1.30      <-- 假设服务器的IP 是10.1.1.30
+
+2. 创建挂载点
+mkdir /mnt/nfs
+
+3. 挂载
+mount -t nfs 10.1.1.30:/data /mnt/nfs

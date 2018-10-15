@@ -1,0 +1,437 @@
+安装
+---------------------------------------
+[root@mob ~]# yum install mysql-server
+
+
+启动服务
+---------------------------------------
+[root@mob ~]# service mysqld start
+Starting mysqld:                                           [  OK  ]
+
+
+mysql 服务器默认监听TCP 3306 端口
+---------------------------------------
+[root@mob ~]# lsof -a -cmysqld -nPi
+COMMAND PID  USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
+mysqld  340 mysql   10u  IPv4 799753      0t0  TCP *:3306 (LISTEN)
+
+
+登录mysql 服务器（本地socket方式）
+---------------------------------------
+[czl@mob ~]$ mysql
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 3
+Server version: 5.1.61 Source distribution
+
+Copyright (c) 2000, 2011, Oracle and/or its affiliates. All rights reserved.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+mysql> 
+
+
+登录mysql 服务器（网络方式）
+---------------------------------------
+[czl@mob ~]$ mysql -h 127.0.0.1
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 5
+Server version: 5.1.61 Source distribution
+
+Copyright (c) 2000, 2011, Oracle and/or its affiliates. All rights reserved.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+mysql> 
+
+
+
+
+
+
+数据库 -> 表 -> 记录 -> 字段
+
+一个数据库服务器上可以有多个数据库
+一个数据库里面可以有多个表
+一张表里可以有多条记录
+一条记录里面可以有多个字段
+
+
+默认的数据目录是 /var/lib/mysql
+[root@mob mysql]# ls -l /var/lib/mysql/
+total 20492
+drwx------ 2 mysql mysql     4096 Jul 29 13:01 class_talk   <-- 名叫class_talk 的数据库
+-rw-rw---- 1 mysql mysql 10485760 Jul 30 12:33 ibdata1      <-- innodb 引擎的数据文件
+-rw-rw---- 1 mysql mysql  5242880 Jul 30 12:33 ib_logfile0  <-- innodb 引擎的日志文件
+-rw-rw---- 1 mysql mysql  5242880 Jul 29 12:47 ib_logfile1  <-- innodb 引擎的日志文件
+drwx------ 2 mysql mysql     4096 Jul 29 12:47 mysql        <-- 名叫mysql 的数据库
+srwxrwxrwx 1 mysql mysql        0 Jul 30 12:33 mysql.sock   <-- socket 文件
+drwx------ 2 mysql mysql     4096 Jul 29 12:47 test         <-- 名叫test 的数据库
+
+
+
+
+
+
+操纵数据：
+
+增删改查 (CRUD)
+
+C: create
+R: read
+U: update
+D: delete
+
+
+
+列出所有的库
+查询当前正在使用的数据库
+列出当前库的所有表
+查询表的结构
+查询表的数据
+查询当前登录的用户
+
+
+列出所有的库
+mysql> show databases;
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| class_talk         |
+| mysql              |
+| test               |
++--------------------+
+4 rows in set (0.00 sec)
+
+
+列出当前库的所有表
+mysql> show tables;
+ERROR 1046 (3D000): No database selected    <-- 还没选择任何数据库，所以出错
+
+查询当前正在使用的数据库
+mysql> select database();
++------------+
+| database() |
++------------+
+| NULL       |                              <-- 当前没有选定任何数据库，所以为NULL
++------------+
+1 row in set (0.00 sec)
+
+mysql> use class_talk                       <-- 把class_talk 数据库设为当前数据库
+Reading table information for completion of table and column names
+You can turn off this feature to get a quicker startup with -A
+
+Database changed
+mysql> select database();
++------------+
+| database() |
++------------+
+| class_talk |                              <-- 再次查询
++------------+
+1 row in set (0.00 sec)
+
+mysql> show tables;                         <-- 再次查询即可看到当前数据库的所有表
++----------------------+
+| Tables_in_class_talk |
++----------------------+
+| message              |
+| session              |
+| user                 |
++----------------------+
+3 rows in set (0.00 sec)
+
+
+查询表的结构
+mysql> desc message;
++-------+--------------+------+-----+---------+-------+
+| Field | Type         | Null | Key | Default | Extra |
++-------+--------------+------+-----+---------+-------+
+| id    | int(10)      | YES  |     | NULL    |       |
+| uid   | int(5)       | YES  |     | NULL    |       |
+| time  | int(10)      | YES  |     | NULL    |       |
+| data  | varchar(500) | YES  |     | NULL    |       |
++-------+--------------+------+-----+---------+-------+
+4 rows in set (0.00 sec)
+
+
+查询表的数据
+mysql> select User,Password,Host from user;
++------+----------+-------------+
+| User | Password | Host        |
++------+----------+-------------+
+| root |          | localhost   |
+| root |          | mob.lab.net |
+| root |          | 127.0.0.1   |
+|      |          | localhost   |
++------+----------+-------------+
+4 rows in set (0.00 sec)
+
+
+时间数据虽不在表中，但也可通过查询命令select 来获取
+mysql> select curdate(),curtime(),now();
++------------+-----------+---------------------+
+| curdate()  | curtime() | now()               |
++------------+-----------+---------------------+
+| 2014-07-30 | 13:03:05  | 2014-07-30 13:03:05 |
++------------+-----------+---------------------+
+1 row in set (0.00 sec)
+
+
+查询当前登录的用户
+mysql> select user();
++----------------+
+| user()         |
++----------------+
+| root@localhost |
++----------------+
+1 row in set (0.00 sec)
+
+
+
+
+mysql 命令的结构
+通常以分号 ';' 或者 '\G'结尾
+如果需要结束当前命令的编辑，而不执行，不能按Ctrl-C，因为Ctrl-C 会导致mysql 客户端退出, 应该用 '\c' 作为命令的结尾。
+
+
+
+查找mysql 的帮助信息
+1. 官方文档
+2. mysql 客户端的 help 指令
+
+
+
+
+
+
+
+
+
+
+
+
+
+SQL
+Structured Query Language
+
+
+创建数据库
+---------------------------------------------
+创建一个名为class 的数据库
+create database class;
+
+创建一个名为class 的数据库，使用utf8 的字符集
+create database class default character set utf8;
+
+另外，也可以通过修改变量 character_set_server 来修改默认的字符集
+set session character_set_server = utf8;
+
+
+查看数据库的创建信息
+show create database class;
+
+删除数据库
+drop database class;
+
+
+
+
+创建表
+---------------------------------------------
+mysql> create table emp (
+    -> ename char(20),
+    -> sex char(1),
+    -> salary int(8));
+Query OK, 0 rows affected (0.04 sec)
+
+
+查看表的创建信息
+---------------------------------------------
+show create table emp;
+
+以 InnoDB 引擎创建表
+create table tbname (id int) engine=innodb;
+
+以 MyISAM 引擎创建表
+create table tbname (id int) engine=myisam;
+
+
+MySQL 中常用的数值类型 
+tinyint
+smallint
+mediumint
+int
+bigint
+float
+double
+decimal
+date
+year
+time
+datetime
+timestamp
+char
+varchar
+
+
+创建表时指定字段类型时，常在类型名字后面加上括号，括号里面写上一个数字，该数字的意义视场合而有不同的意义
+M indicates the maximum display width for integer types. For floating-point and fixed-point types, M is the total number of digits that can be stored. For string types, M is the maximum length. The maximum allowable value of M depends on the data type.
+
+
+删除表
+---------------------------------------------
+drop table emp;
+
+
+给表重命名
+---------------------------------------------
+rename table emp1 to emp; 
+
+
+增加字段
+---------------------------------------------
+alter table emp add column hiredate date;
+alter table emp add column deptno tinyint after salary;
+alter table emp add column age tinyint after ename;
+alter table emp add column empno int first;
+alter table emp add column manager int;
+
+删除字段
+---------------------------------------------
+alter table emp drop manager;
+
+
+修改字段
+---------------------------------------------
+alter table emp change empno empno int(11) zerofill;    <-- 改列的数据类型
+alter table emp change hierday hiredate date;           <-- 改列名
+
+
+复制一个表
+---------------------------------------------
+create table emp_bak as select * from emp;
+
+
+
+
+示范表结构：
+CREATE TABLE `emp` (
+  `empno` mediumint(8) unsigned zerofill NOT NULL AUTO_INCREMENT,
+  `ename` char(20) DEFAULT NULL,
+  `sex` char(1) DEFAULT NULL,
+  `age` tinyint(4) DEFAULT NULL,
+  `salary` int(5) unsigned zerofill DEFAULT NULL,
+  `hiredate` date DEFAULT NULL,
+  `deptno` tinyint(4) DEFAULT NULL,
+  PRIMARY KEY (`empno`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8
+
+
+
+
+插入数据
+---------------------------------------------
+一次插入一条数据
+insert into emp (ename, sex, age, salary, hiredate, deptno) values ('zhangsan','M','31','16','2014-06-06','7');
+
+一次插入多条数据
+insert into emp (ename, sex, age, salary, hiredate, deptno) values
+('zhangsan','M','31','16','2014-06-06','7'),
+('lisi','M','28','20','2014-06-07','1'),
+('wangwu','M','40','25','2014-06-08','3');
+
+
+删除数据
+---------------------------------------------
+删除员工号码为23 的记录
+delete from emp where empno=23;
+
+删除所有记录
+delete from emp;
+
+
+修改数据
+---------------------------------------------
+修改员工号码为11 和19 的两个员工的性别信息
+update emp set sex='F' where empno = 11 or empno = 19;
+
+
+查询数据
+---------------------------------------------
+取出empno, ename, salary 这三列数据
+select empno,ename,salary from emp;
+
+按工资排序
+select empno,ename,salary from emp order by salary;
+
+按工资反序排序
+select empno,ename,salary from emp order by salary desc;
+
+按工资反序排序，并取出前面5条记录
+select empno,ename,salary from emp order by salary desc limit 5;
+
+查询性别为男性，员工号码小于10，年龄介于40和45之间，入职月份为6月的员工的全部信息
+select * from emp where sex = 'M' and empno < 10 and (age >=40 and age <= 45) and month(hiredate) = 6;
+
+统计各个部门的总工资，最大工资，最小工资，平均工资，员工总数
+mysql> select sum(salary) sum, max(salary) max, min(salary) min, avg(salary) avg, count(*) count,deptno from emp group by deptno order by deptno;
++------+------+------+---------+-------+--------+
+| sum  | max  | min  | avg     | count | deptno |
++------+------+------+---------+-------+--------+
+|   83 |   30 |    6 | 16.6000 |     5 |      1 |
+|   96 |   32 |   14 | 24.0000 |     4 |      3 |
+|    7 |    7 |    7 |  7.0000 |     1 |      4 |
+|   46 |   31 |   15 | 23.0000 |     2 |      5 |
+|    6 |    6 |    6 |  6.0000 |     1 |      6 |
+|   40 |   16 |   10 | 13.3333 |     3 |      7 |
+|   40 |   18 |    4 | 13.3333 |     3 |      8 |
+|   30 |   27 |    3 | 15.0000 |     2 |      9 |
+|   24 |   24 |   24 | 24.0000 |     1 |     10 |
++------+------+------+---------+-------+--------+
+
+
+
+
+mysql 的数据类型中，整数类型int, mediumint, tinyint 等等，可以通过int(8) 这种形式来指定，小括号里面的数字，只有和zerofill 属性配合起来，才有效果，效果图
+mysql> alter table emp change column id id int(11) zerofill;
+Query OK, 0 rows affected (0.02 sec)
+Records: 0  Duplicates: 0  Warnings: 0
+
+mysql> select * from emp;
++----------+------+--------+-------------+
+| ename    | sex  | salary | id          |
++----------+------+--------+-------------+
+| zhangsan | M    |    300 | 00000000001 |  <-- 不足11位的，前面就用0来补足
++----------+------+--------+-------------+
+
+
+
+
+
+
+
+phpmyadmin
+phpmyadmin 是一个mysql 的管理工具，基于apache + php 
+
+安装方法：
+1. 安装apache 和 php 
+yum install 'httpd-*' 'php-*'
+
+2. 启动/重启httpd 服务器
+
+3. 下载安装包
+wget https://files.phpmyadmin.net/phpMyAdmin/4.0.10.20/phpMyAdmin-4.0.10.20-all-languages.tar.xz
+
+4. 把下载好的安装包解压到网站根目录下，改名为phpmyadmin
+tar xf phpMyAdmin-4.8.3-all-languages.zip -C /var/www/html/
+mv /var/www/html/{phpMyAdmin-4.8.3-all-languages,phpmyadmin}
+
+5. 安装好后默认就可以通过密码认证登录，登录页面是 http://hostname/phpmyadmin，也可以根据需要打开 http://hostname/phpmyadmin/setup，通过图形化界面配置。配置完后，下载配置文件，放到目录/var/www/html/phpmyadmin/ 中。

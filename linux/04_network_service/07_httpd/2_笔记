@@ -1,0 +1,194 @@
+survey.netcraft.net
+这个网站上可以查到最新的网站服务器的使用率
+
+
+到哪里查找帮助信息?
+1. 参考/etc/httpd/conf/httpd.conf
+2. 安装httpd-manual包，然后打开 /var/www/manual/index.html
+
+
+
+安装httpd服务器
+yum install httpd
+
+
+
+对配置文件做语法检查
+httpd -t
+
+
+
+** 红帽6里面的查看和配置方法：
+
+apache 可运行于两种模式：prefork, worker
+[czl@lab sbin]$ httpd -l
+Compiled in modules:
+  core.c
+  prefork.c             <-- 当前的httpd程序是prefork模式
+  http_core.c
+  mod_so.c
+
+更换到worker模式
+[root@lab httpd]# mv -v /usr/sbin/httpd{,.prefork}
+`/usr/sbin/httpd' -> `/usr/sbin/httpd.prefork'
+[root@lab httpd]# mv -v /usr/sbin/httpd{.worker,}
+`/usr/sbin/httpd.worker' -> `/usr/sbin/httpd'
+[root@lab httpd]# httpd -l
+Compiled in modules:
+  core.c
+  worker.c             <-- 当前的httpd程序的模式变成了worker
+  http_core.c
+  mod_so.c
+
+** 红帽7里面的查看和配置方法：
+
+1. 查看
+
+[root@localhost conf.modules.d]# httpd -V
+Server version: Apache/2.4.6 (CentOS)
+Server built:   Apr 20 2018 18:10:38
+Server's Module Magic Number: 20120211:24
+Server loaded:  APR 1.4.8, APR-UTIL 1.5.2
+Compiled using: APR 1.4.8, APR-UTIL 1.5.2
+Architecture:   64-bit
+Server MPM:     prefork
+  threaded:     no
+    forked:     yes (variable process count)
+
+2. 修改
+   编辑文件/etc/httpd/conf.modules.d/00-mpm.conf，根据需要启用相应的行
+
+    LoadModule mpm_prefork_module modules/mod_mpm_prefork.so
+    # LoadModule mpm_worker_module modules/mod_mpm_worker.so
+    #LoadModule mpm_event_module modules/mod_mpm_event.so
+
+
+
+
+apache 常用设置指令
+
+ServerRoot "/etc/httpd"
+PidFile run/httpd.pid
+Timeout 60
+KeepAlive On
+MaxKeepAliveRequests 100
+KeepAliveTimeout 15
+Listen 80
+#Listen 12.34.56.78:80
+Include conf.d/*.conf           <-- 把 $ServerRoot/conf.d/下面所有的.conf文件都包含进来
+User apache                     <-- httpd进程的用户身份
+Group apache                    <-- httpd进程的组身份
+ServerAdmin root@localhost      <-- 管理员邮箱
+DocumentRoot "/var/www/html"    <-- 网站根目录
+DirectoryIndex index.html       <-- 设置默认主页文件
+AccessFileName .htaccess        <-- 访问控制文件的名字
+ErrorLog logs/error_log         <-- 错误日志的存放位置
+LogLevel warn                   <-- 日志等级
+
+
+
+
+
+
+
+[root@lab httpd]# service httpd restart
+Stopping httpd:                                            [  OK  ]
+Starting httpd: httpd: Could not reliably determine the server's fully qualified domain name, using lab.net for ServerName
+                                                           [  OK  ]
+出现以上警告信息的原因是：
+1. 没有定义ServerName，或者
+2. httpd.conf文件中定义的ServerName 没有在/etc/hosts 文件中与IP绑定
+
+
+
+
+
+访问控制:
+Order allow,deny
+Allow from all
+
+allow 和 deny 如何结合？
+类似于层叠样式表 css.
+
+
+
+
+指令的容器： 
+Directory: 针对文件系统上的一个目录
+Files: 针对指定的文件，可以是全局的，也可以是在某个Directory下
+Location: 针对网址的控制
+
+
+
+
+对目录的访问进行密码控制
+1. 创建访问控制文件
+需要控制哪个目录及其子目录，就在Directory 指令里指定哪个目录
+<Directory "/var/www/html/secret">
+    authname "Authenticate yourself"
+    authtype basic
+    authuserfile /etc/httpd/userpasswd
+    require valid-user
+</Directory>
+
+2. 创建账户文件
+htpasswd -c /etc/httpd/userpasswd  u1  <-- 创建该文件并添加用户u1
+htpasswd /etc/httpd/userpasswd  u2     <-- 添加用户u2
+
+3. 重启httpd服务
+
+如果一个目录使用密码控制访问，那么在通过网页浏览器列出该目录的父目录时，看不到该目录，也就是说，该目录被隐藏了。但是可以通过直接输入url来访问。
+
+
+
+
+
+基于域名的虚拟主机
+NameVirtualHost *:80 
+<VirtualHost *:80>
+    DocumentRoot /etc 
+    ServerName etc.lab.net
+    <Location />
+        options Indexes
+        order deny,allow
+        allow from all
+    </Location>
+</VirtualHost>
+
+
+
+
+
+别名：把URL映射到文件系统路径
+Alias URL-path file-path|directory-path
+
+例子：把系统上面的目录/external/software 映射到URL http://10.1.1.1/software
+Alias /software /external/software
+<Directory "/external/software">
+    Options Indexes
+    Require all granted
+</Directory>
+
+
+
+配置https
+
+1. 安装模块和工具
+    yum install mod_ssl openssl
+
+2. 写配置
+    vi /etc/httpd/conf.d/ssl.conf
+
+    以下配置项用于指定私钥和证书（公钥）
+    SSLCertificateFile /etc/pki/tls/certs/localhost.crt
+    SSLCertificateKeyFile /etc/pki/tls/private/localhost.key
+
+3. 预备证书和key
+     openssl genrsa -out ca.key 2048
+     openssl req -new -key ca.key -out ca.csr
+     openssl x509 -req -days 365 -in ca.csr -signkey ca.key -out ca.crt
+
+4. 重启服务
+    systemctl restart httpd
+
+5. 测试

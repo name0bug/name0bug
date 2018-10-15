@@ -1,0 +1,152 @@
+一、练习配置rsyslog
+
+config file: /etc/rsyslog.conf
+
+1. 把authpriv 的所有信息保存到/tmp/log/auth.log
+authpriv.*      /tmp/log/auth.log
+
+2. 把local3 的info级别的信息输出到tty12
+local3.=info    /dev/tty12
+
+3. 把local4 的info 及以上级别的信息发送给root 用户
+local4.info     root
+
+4. 把local4 的crit 及以上级别的信息发送给所有人
+local4.crit     *
+
+5. service rsyslog restart      <-- centos 6
+   systemctl restart rsyslog    <-- centos 7
+
+6. 使用logger 对上面的配置进行测试
+logger -t "TESTING" -p authpriv.info "to authpriv.info"
+logger -t "TESTING" -p authpriv.crit "to authpriv.crit"
+logger -t "TESTING" -p local3.debug "to local3.debug"
+logger -t "TESTING" -p local3.info "to local3.info"
+logger -t "TESTING" -p local3.crit "to local3.crit"
+logger -t "TESTING" -p local4.warning "to local4.warning"
+logger -t "TESTING" -p local4.alert "to local4.alert"
+
+
+
+
+
+二、用物理机做日志服务器，在虚拟机上配置rsyslog，把某些日志发送到物理机上。
+
+服务器和客户机都用 rhel6.5版本，假设服务器IP地址为10.1.1.1
+
+1. 服务器上的配置
+[root@mob ~]# vi /etc/rsyslog.conf          去掉下面两行的注释，监听tcp的514端口
+$ModLoad imtcp
+$InputTCPServerRun 514
+
+[root@mob ~]# service rsyslog restart       <-- 重启rsyslog服务
+[root@mob ~]# iptables -I INPUT -p tcp --dport 514 -j ACCEPT
+或者
+[root@mob ~]# iptables -F INPUT
+
+    辅助测试命令： tail -n0 -f /var/log/messages
+
+2. 客户机上的配置
+根据需要把日志发给服务器，以local0.info 为例
+[root@mob ~]# vi /etc/rsyslog.conf
+local0.info   @@3.3.3.9:514                 <-- 这个日志发到服务器上后标识也是local0.info
+
+[root@mob ~]# service rsyslog restart        <-- 重启rsyslog服务
+
+3. 测试
+在客户机上用logger 生成一条日志信息
+[root@mob ~]# logger -t "REMOTE" -p local0.info "generated from client"
+
+验证在服务器上能看到客户机发来的日志数据
+[root@mob ~]# grep -R 'REMOTE' /var/log
+
+
+
+
+
+
+
+三、为文件/dev/shm/secure.log 配置轮转计划
+要求：
+    1. 最多保存3个副本
+    2. 创建空文件
+
+1. 创建实验所用的文件
+ touch /dev/shm/secure.log
+
+2. 书写轮转所需的配置文件
+ vi /tmp/rotate.conf
+ 内容如下：
+/dev/shm/secure.log
+{
+    rotate 3
+    create
+}
+
+3. 执行轮转程序
+ logrotate -f /tmp/rotate.conf
+
+
+
+四、练习logrotate
+1. 创建一个文件，路径是/tmp/log/xx.log
+2. 书写一个轮转的配置文件，用来轮转上面的文件，要求：
+   每周轮转一次
+   创建空文件，权限为0600，用户是root，属组是root
+   最多保存3个副本
+   如果该文件尺寸大于30K，则不管周期是否到，都轮转
+
+   /tmp/log/python.log {
+       weekly
+       create 0600 root root
+       rotate 3
+       size 30k
+   }
+
+3. 测试
+   logrotate -f /path/to/config/file
+
+
+
+
+
+五、测试unlink.c 程序，验证Linux 删除一个文件的时机
+gcc unlink.c                <-- 编译程序
+./a.out                     <-- 运行程序
+ls -l /tmp/xxyyzz.tmp       <-- 在另外一个窗口查看程序生成的文件
+kill -SIGINT 1234           <-- 在另外一个窗口给进程发第一次信号 (假设进程号为1234)
+ls -l /tmp/xxyyzz.tmp       <-- 再次查看文件是否已经被删除
+kill -SIGINT                <-- 再次给进程发信号，可以看到两个进程都仍能够使用已经删除的文件
+ls -l /proc/1234/fd/        <-- 查看进程的文件描述符，应能看到类似以下的结果
+    lrwx------ 1 czl czl 64 Nov 13 20:02 3 -> /tmp/xxyyzz.tmp (deleted)
+cat /proc/1234/fd/3         <-- 用cat 命令读取该链接文件，应能读到内容
+kill -SIGINT                <-- 再次给进程发信号，进程自动退出
+
+
+五、(Shell 版) 验证Linux 删除一个文件的时机
+
+    1. 在第一个终端创建并保持打开一个文件，写入一些内容，观察磁盘占用量
+        为了能够精确地观察到存储空间的变化，可以把文件存放到 /dev/shm
+        exec 3> /dev/shm/file       <-- 创建文件并保持打开
+        echo $$                     <-- 查看当前shell的pid，假设是29103
+
+    2. 在第二个终端删除该文件
+        ls -l /proc/29103/fd        <-- 查看进程29103所打开的文件
+        rm /dev/shm/file            <-- 删除文件
+        ls -l /proc/29103/fd        <-- 再次查看，注意观察输出
+
+    3. 在第一个终端验证：依然能够使用被删除掉的文件
+        df /dev/shm                 <-- 查看当前文件系统的使用量
+        echo -n 1234567 >&3         <-- 写一些到3号文件
+        df /dev/shm                 <-- 确认文件系统的使用量发生了变化
+
+    4. 在第二个终端验证：可以通过第一个终端的进程的描述符读取到被删除的文件的内容
+        cat /proc/29103/fd/3        <-- 读取被删除（除名但数据还在）的文件的内容
+
+    5. 在第一个终端关闭文件
+        df /dev/shm                 <-- 确认一次文件系统的使用量
+        exec 3>&-
+
+    6. 在第二个终端确认29103号进程的3号文件已经关闭，文件系统空间被释放
+        ls -l /proc/29103/fd        <-- 确认文件已经被关闭
+        df /dev/shm                 <-- 确认文件系统的使用量已经恢复

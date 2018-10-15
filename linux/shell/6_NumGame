@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# 1. 数字随机不固定
+# 2. 设置猜数字的最大次数, 给用户提示还有几次机会
+# 3. 设置用户自由退出
+
+num=$[RANDOM % 100 + 1]
+
+while : ; do
+    read -p "请输入[1 - 100]的数: " inputNum
+
+    if [ $inputNum -gt $num ] ; then
+        echo '真可惜! 就大了那么一点点...'
+    elif [ $inputNum -lt $num ]; then
+        echo '真历害! 就小了那么一点点...'
+    else
+        echo "恭喜你，中奖了, 请留下联系电话方便发送奖品!!"
+        break
+    fi
+done

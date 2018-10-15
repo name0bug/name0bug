@@ -1,0 +1,42 @@
+1. 操练scp
+
+    1. 把远程文件 /bin/bash 复制到本地
+        scp root@3.3.3.8:/bin/bash /tmp
+
+    2. 把远程目录 /tmp/data 复制到本地
+        scp -r root@3.3.3.8:/tmp/data /tmp
+
+    3. 把本地文件 /bin/bash 复制到远程
+        scp /bin/bash root@3.3.3.8:/tmp
+
+    4. 把本地目录 /tmp/data 复制到远程
+        scp -r /tmp/data root@3.3.3.8:/tmp
+
+    5. 修改ssh服务器监听的端口为2022，然后再次使用scp
+        scp -P 2022 /bin/bash root@3.3.3.8:/tmp
+
+    6. 复制一个权限为444的远程数据到本地，保持文件权限不变
+        scp -p /bin/bash root@3.3.3.8:/tmp
+
+
+2. 操练rsync
+
+    1. 把本地目录 /tmp/data 同步到远程目录 /tmp/data，用-v 参数观察输出
+        rsync -av /tmp/data root@3.3.3.8:/tmp/
+    2. 再次尝试把本地目录 /tmp/data 同步到远程目录 /tmp/data，用-v 参数观察输出
+    3. 添加文件 /tmp/data/newfile，再次尝试相同的同步操作，用-v 参数观察输出
+    4. 在 /tmp/data下创建硬链接，指向同目录的文件，尝试同步，看文件内容是否被传输
+        ln /tmp/data/somefile /tmp/data/somefile2
+    5. 把远程的数据同步到本地
+        rsync -rv root@3.3.3.8:/tmp/data /tmp/
+    6. 测试 --partial 命令的断点续传效果
+        rsync --partial -v /tmp/verybig root@3.3.3.8:/tmp/data/
+
+
+3. 配置公钥登录
+
+    1. 在客户端创建钥匙
+        ssh-keygen -t rsa -b 4096 -C "VM test"
+
+    2. 从客户端把刚刚创建好的公钥传送到远程服务器
+        ssh-copy-id root@3.3.3.9

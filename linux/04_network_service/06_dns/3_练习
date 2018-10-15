@@ -1,0 +1,300 @@
+为了简化实验难度，做以下实验之前，先关闭防火墙和SELinux
+# iptables -F
+# systemctl disable firewalld
+# systemctl stop firewalld
+# setenforce 0
+
+
+
+
+
+
+一、配置基本的DNS 服务器（包含正向解析和反向解析）
+域名：abc.com
+服务器IP：10.1.1.2
+
+1. 编辑主配置文件 /etc/named.conf
+----------------------------------------------------
+options {
+    listen-on port 53 { any; };     <-- 改为any，监听所有本地IP地址
+    listen-on-v6 port 53 { ::1; };
+    directory   "/var/named";
+    dump-file   "/var/named/data/cache_dump.db";
+    statistics-file "/var/named/data/named_stats.txt";
+    memstatistics-file "/var/named/data/named_mem_stats.txt";
+    allow-query     { any; };       <-- 允许任何人查询
+    recursion yes;
+
+    dnssec-enable no;
+    dnssec-validation no;
+
+    /* Path to ISC DLV key */
+    bindkeys-file "/etc/named.iscdlv.key";
+
+    managed-keys-directory "/var/named/dynamic";
+};
+
+logging {
+        channel default_debug {
+                file "data/named.run";
+                severity dynamic;
+        };
+};
+
+zone "." IN {
+    type hint;
+    file "named.ca";
+};
+
+include "/etc/named.rfc1912.zones";
+include "/etc/named.root.key";
+----------------------------------------------------
+
+
+2. 配置区域声明文件 /etc/named.rfc1912.zones，添加一个域及其反向解析域
+----------------------------------------------------
+zone "abc.com" IN {
+        type master;
+        file "data/master.abc.com.zone";
+};
+zone "2.1.10.in-addr.arpa" IN { 
+        type master;
+        file "data/master.1.1.10.in-addr.arpa.zone";
+};
+----------------------------------------------------
+
+
+3. 配置区域数据库文件
+正向解析域 /var/named/data/master.abc.com.zone
+----------------------------------------------------
+$TTL 3600
+@   IN  SOA dns.abc.com.  root.abc.com. (
+            2018051901       <-- 版本号，下面是各种时间，如果不做主从结构，这些可以任意写
+            30               <-- slave 主动联系master的间隔
+            60               <-- slave 从master更新失败的重试间隔
+            90               <-- 在无法联系master的情况下多久slave停止服务
+            3600 )           <-- 对否定回答的缓存时间
+        IN  NS  dns.abc.com. <-- 指定本域中权威DNS服务器
+dns     IN  A   10.1.1.1     <-- dns 服务器的地址
+mail    IN  A   10.1.1.1     <-- A记录就是主机的IP地址Address
+host1   IN  A   10.1.1.11
+----------------------------------------------------
+
+反向解析域 /var/named/data/master.1.1.10.in-addr.arpa.zone
+----------------------------------------------------
+$TTL 86400
+@   IN  SOA dns.abc.com.  root.abc.com. (
+            2018051901
+            30
+            60
+            90
+            3600 )
+        IN  NS    dns.abc.com.   <-- 指定本域中权威DNS服务器
+11      IN  PTR   host1.abc.com.
+----------------------------------------------------
+
+
+4. 启动服务 service named start
+第一次启动该服务的时，会创建文件/etc/rndc.key，可能需要等待几分钟，如果不想等待，可以使用下面的技巧绕过去：
+[root@mob ~]# mv /dev/random /dev/random.orig       <-- 备份原来的random 文件
+[root@mob ~]# cp -a /dev/urandom /dev/random        <-- 复制一份urandom 来做random
+[root@mob ~]# service named restart                 <-- 然后再次启动DNS 服务器，会很快完成
+[root@mob ~]# mv -f /dev/random.orig /dev/random    <-- 恢复random
+
+
+5. 测试
+把系统的域名服务器改为刚刚创建的域名服务器
+vi /etc/resolv.conf
+nameserver 10.1.1.1
+
+用命令nslookup 测试
+nslookup dns.abc.com
+
+
+
+
+
+
+
+
+
+二、设置以下域名的解析：CNAME，裸域名，不在数据库中的域名，连续范围内的域名
+1. 在练习一的基础之上，修改区域数据库文件
+正向解析域 /var/named/data/master.abc.com.zone
+----------------------------------------------------
+$TTL 3600
+@   IN  SOA dns.abc.com.  root.abc.com. (
+            2018051901       <-- 版本号，下面是各种时间，如果不做主从结构，这些可以任意写
+            30               <-- slave 主动联系master的间隔
+            60               <-- slave 从master更新失败的重试间隔
+            90               <-- 在无法联系master的情况下多久slave停止服务
+            3600 )           <-- 对否定回答的缓存时间
+        IN  NS  dns.abc.com. <-- 指定本域中权威DNS服务器
+dns     IN  A   10.1.1.1     <-- dns 服务器的地址
+mail    IN  A   10.1.1.1     <-- A记录就是主机的IP地址Address
+host1   IN  A   10.1.1.11
+web     IN  A   10.1.1.2
+earth   IN  CNAME web        <-- CNAME 记录
+mars    IN  CNAME earth
+www     IN  CNAME mars
+@       IN  A   10.1.1.1     <-- 对裸域的解析（这里的裸域名是abc.com）
+*       IN  A   10.1.1.1     <-- 对其他所有未定义的名字的解析
+$GENERATE 201-254 host$  IN  A   10.1.2.$   <-- 定义了一个范围的解析
+----------------------------------------------------
+
+2. 反向解析域 /var/named/data/master.1.1.10.in-addr.arpa.zone
+----------------------------------------------------
+$TTL 86400
+@   IN  SOA dns.abc.com.  root.abc.com. (
+            2018051901
+            30
+            60
+            90
+            3600 )
+        IN  NS    dns.abc.com.
+1       IN  PTR   dns.abc.com.
+1       IN  PTR   mail.abc.com.
+11      IN  PTR   host1.abc.com.
+2       IN  PTR   web.abc.com.
+2       IN  PTR   earth.abc.com.
+2       IN  PTR   mars.abc.com.
+2       IN  PTR   www.abc.com.
+1       IN  PTR   abc.com.        <-- 10.1.1.1被解析为abc.com
+$GENERATE 1-254  $   IN  PTR   host$.abc.com.   <-- 定义一个范围的解析
+----------------------------------------------------
+
+3. 重启DNS 服务器
+service named restart
+
+
+
+
+
+
+
+
+
+
+三、配置从DNS 服务器
+假设主服务器IP是10.1.1.2
+假设从服务器IP是10.1.1.3
+
+主服务器上的配置
+1. 编译区域数据库文件
+vi /var/named/data/master.zone
+$TTL 60
+@   IN  SOA dns.infosec.com.  root.infosec.com. (
+            2018090601              <-- 序列号行，留意这行，下面有说明
+            10
+            30
+            40
+            60 )
+        IN  NS  dns1.infosec.com.    <-- 本域的域名服务器
+        IN  NS  dns2.infosec.com.    <-- 必须把从服务器列在这里
+dns1    IN  A   10.1.1.2
+dns2    IN  A   10.1.1.3             <-- 从服务器的IP
+@       IN  A   10.10.10.10
+www     IN  A   10.1.1.30
+
+2. 重启服务
+service named restart
+
+
+从服务器上面的配置
+1. 确保从服务器上面的主配置文件中，以下两行设置为 no
+        dnssec-enable no;
+        dnssec-validation no;
+
+2. 编辑从服务器的区域声明文件/etc/named.rfc1912.zones，添加和主服务器相同的正向域
+zone "abc.com" IN {
+        type slave;                         <-- slave表示是从服务器
+        file "slaves/slave.abc.com.zone";   <-- 数据文件将会放到哪里
+        masters { 10.1.1.2; };              <-- 指明从哪个服务器同步数据
+};
+
+3. 重启从服务器的named服务
+
+4. 测试
+    3.1 在主服务器上面添加新的记录，或者修改现有的记录，增大序列号
+    3.2 验证用nslookup 能够在从服务器上面查到新添加的记录
+
+
+
+
+
+
+
+
+
+
+四、配置转发型域
+老师配置一个名为abc.com 的域
+老师的DNS 服务器IP：3.3.3.8
+
+
+学生机上的配置
+1. 确保服务器上面的主配置文件中，以下两行设置为 no
+        dnssec-enable no;
+        dnssec-validation no;
+
+2. 添加一个域abc.com，配置为转发型的域
+vi /etc/named.rfc1912.zones
+----------------------------------------------------
+zone "abc.com" IN {
+        type forward;
+        forward only;
+        forwarders { 3.3.3.8; };      <-- 老师 的DNS 服务器IP
+};
+----------------------------------------------------
+
+2. 重启服务器
+
+3. 测试
+    3.1. 学生把自己系统的域名解析服务器指向自己的DNS 服务器
+    vi /etc/resolv.conf
+    nameserver 127.0.0.1
+
+    3.2. 用dig/nslookup 来查询对方域中的主机
+    dig @3.3.3.8 mail.abc.com
+    nslookup mail.abc.com
+
+
+
+
+
+
+
+
+五、配置缓存型DNS 服务器
+把所有的请求发到老师的DNS 服务器
+老师的IP：3.3.3.8
+
+1. 确保服务器上面的主配置文件中，以下两行设置为 no
+        dnssec-enable no;
+        dnssec-validation no;
+
+2. 编辑主配置文件/etc/named.conf
+----------------------------------------------------
+options {
+    listen-on port 53 { any; };
+    listen-on-v6 port 53 { ::1; };
+    directory   "/var/named";
+    dump-file   "/var/named/data/cache_dump.db";
+        statistics-file "/var/named/data/named_stats.txt";
+        memstatistics-file "/var/named/data/named_mem_stats.txt";
+    allow-query     { any; };
+    recursion yes;
+
+    forward only;
+    forwarders { 3.3.3.8; };     <-- 把请求转发给老师的服务器，然后把结果缓存起来
+
+    dnssec-enable no;
+    dnssec-validation no;
+
+    /* Path to ISC DLV key */
+    bindkeys-file "/etc/named.iscdlv.key";
+
+    managed-keys-directory "/var/named/dynamic";
+};
+
+2. 重启服务器

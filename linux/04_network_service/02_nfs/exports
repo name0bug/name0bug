@@ -1,0 +1,2 @@
+/pdata/software 10.1.1.0/24(ro,all_squash) 10.1.15.0/24(ro,all_squash)
+/data/lecture 10.1.15.2/32(rw,no_root_squash,no_all_squash)

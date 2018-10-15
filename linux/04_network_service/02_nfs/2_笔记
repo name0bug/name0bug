@@ -1,0 +1,136 @@
+服务端的命令和文件文件
+/usr/sbin/exportfs
+/etc/exports
+/var/lib/nfs/etab
+
+
+客户端的命令
+showmount
+mount
+umount
+
+挂载nfs 时，可用参数可以参考 man 5 nfs
+
+
+
+
+红帽6.5中，nfs共享是通过两个服务来提供的
+/etc/init.d/rpcbind
+/etc/init.d/nfs
+
+
+
+列出远程机上共享的目录
+showmount -e 10.1.1.1
+
+
+挂载远程机上的共享目录
+mount -t nfs 10.1.1.1:/external/software /software
+
+
+
+NFS 常用的配置参数，可以通过 man 5 exports 来查询
+
+常用参数：
+ro                  <-- 只读
+rw                  <-- 读写
+no_root_squash      <-- 不映射uid 0 的请求到匿名用户
+root_squash         <-- 把来自uid 0 的请求映射到匿名用户（默认启用）
+all_squash          <-- 映射所有uid 和 uid 的请求到匿名用户/组（65534）
+no_all_squash       <-- 和all_squash相反（默认启用）
+anonuid             <-- 自定义匿名用户的uid
+anongid             <-- 自定义匿名组的gid
+sync                <-- 同步写入
+async               <-- 异步写入
+
+
+配置文件范例：
+/               10.1.1.11/32(rw) 10.1.1.12/32(rw,no_root_squash) 10.1.1.0/24(ro)
+/home/czl       172.16.1.3/32(rw,all_squash,anonuid=150,anongid=100)
+/pub            *(ro,async,insecure,all_squash)
+
+
+
+客户端访问nfs共享目录时，如果不做特别设定，是以客户端用户的uid去访问的，如果客户端创建了文件，那么这个文件的所有者uid就是客户端的uid，而不是服务端。这个行为可以通过all_squash来改变。
+
+
+查看当前的共享目录的共享参数
+cat /var/lib/nfs/etab    
+
+
+修改了配置文件/etc/exports 后，运行以下命令使之生效
+exportfs -arv
+
+
+
+
+
+配置nfs 時常见的问题：
+1. 防火墙挡住了客户端的请求
+2. SELinux 阻止了客户端的请求
+3. nfs 配置文件中，用IP地址來指定一台主机，但忘了加上子网掩码
+
+-------------------------------------------------------
+
+
+固定nfs 的端口
+当需要通过防火墙来限制对nfs的访问时，需要固定nfs的端口，因为默认nfs有许多端口是不固定的。可以通过修改以下配置文件来固定端口。
+vi /etc/sysconfig/nfs
+确保配置文件中有以下行：
+RQUOTAD_PORT=875
+LOCKD_TCPPORT=32803
+LOCKD_UDPPORT=32769
+MOUNTD_PORT=892
+STATD_PORT=662
+STATD_OUTGOING_PORT=2020
+RDMA_PORT=20049
+
+重启服务
+service rpcbind restart
+service nfs restart
+
+在防火墙上打开相应的端口
+临时添加
+grep -v ^# /etc/sysconfig/nfs |
+awk -F= '{print $2}' |
+while read port
+do
+    iptables -I INPUT -p tcp --dport $port -j ACCEPT
+    iptables -I INPUT -p udp --dport $port -j ACCEPT
+done
+
+永久添加
+把以上所添加的规则加到防火墙的配置文件/etc/sysconfig/iptables 中
+
+
+
+
+
+
+
+
+
+配置autofs，用以自动挂载nfs目录
+相关的配置文件：
+/etc/auto.master
+/etc/sysconfig/autofs
+
+1. 安装autofs
+yum install autofs
+
+2. 在主配置文件 /etc/auto.master 中添加一条记录
+/nfs /etc/auto.nfs      <-- 把配置文件/etc/auto.nfs中指定的所有设备挂在到/nfs下，挂载点/nfs 无需手动创建
+
+3. 创建配置文件 /etc/auto.nfs，该文件可能不存在。配置语法可参考 man 文档 autofs(5)
+software - 10.1.1.1:/external/software
+
+4. 重启autofs服务
+service autofs restart
+
+
+配置好以后，怎么使用？
+按照上面的配置，10.1.1.1:/external/software 将会被挂载到/nfs/software 目录下，/nfs/software默认是不存在的，当需要访问 /nfs/software 里面的内容时，autofs 会自动创建挂载点，并挂载。当autofs自动卸载的时候，会把挂载点删除（请参考下面的BROWSE_MODE）。
+
+在配置文件 /etc/sysconfig/autofs 中，有两个值得注意的参数
+TIMEOUT=10              <-- 如果过了设定的时间（这里是10秒），就自动卸载
+BROWSE_MODE="yes"       <-- 就算没有挂载，也显示挂载点

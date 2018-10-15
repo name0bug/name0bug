@@ -1,0 +1,66 @@
+跳跃式的时间同步是一步到位把系统时间设置成与服务器的时间一样。这样有可能有造成一些问题，比如说系统的定时任务被重复执行，或者被跳过。
+
+平滑式同步每次改变的偏移量不大，是一点一点地改变，能够确保一个时间不经历两次，但是耗时较长。
+
+
+ntpd的-x参数意义
+
+offset      0~128ms 128ms~600s      600s~1000s      1000s以上
+有-x        微调    微调            跳跃            退出(用-g参数可忽略)
+无-x        微调    跳跃            跳跃            退出(用-g参数可忽略)
+
+
+设置ntpd为平滑同步
+
+编辑 /etc/sysconfig/ntpd
+
+    OPTIONS="-g -x"
+
+
+配置ntpd用于维护本机时间
+
+1. 安装
+
+    yum install ntp
+
+2. 获取互联网上的时间服务器
+
+    http://www.pool.ntp.org/zone/cn
+
+3. 编辑配置文件 /etc/ntp.conf
+
+    server 0.cn.pool.ntp.org iburst
+    server 1.cn.pool.ntp.org iburst
+    server 2.cn.pool.ntp.org iburst
+    server 3.cn.pool.ntp.org iburst
+
+4. 手动设定一次时间
+
+    timedatectl set-timezone Asia/Chongqing
+    ntpd -q
+
+5. 启动时间服务器
+
+    systemctl start ntpd
+
+6. 查状态
+    ntpq -p
+    timedatectl
+
+
+
+配置ntpd用于为其它机器提供时间同步服务
+
+服务端：
+    1. 按照"配置ntpd用于维护本机时间"的步骤配置好一个时间服务器
+
+    2. 修改服务器的配置文件 /etc/ntp.conf，添加以下配置，允许网段3.3.3.0/24获取时间
+
+        restrict 3.3.3.0 mask 255.255.255.0
+
+    3. 重启服务器的ntpd服务
+
+    4. 配置防火墙，允许访问 123 端口
+
+客户端：
+    1. 按照"配置ntpd用于维护本机时间"的步骤配置客户端，时间服务器写刚刚配置好的服务器的ip

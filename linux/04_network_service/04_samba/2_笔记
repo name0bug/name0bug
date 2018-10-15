@@ -1,0 +1,193 @@
+安装samba服务器
+yum instal samba samba-common
+
+
+Samba 完整的详细的文档，可参考man 文档 smb.conf(5)
+小技巧：
+在该man文档中查找某个参数，可以用以下指令(比如我们要找valid users)
+/valid users =
+
+
+
+
+列出服务器上可见的共享
+smbclient -L //10.1.1.1             <-- 用匿名用户来列
+smbclient -L //10.1.1.1 -U u1       <-- 用u1用户来列
+
+
+登录samba 共享
+smbclient //10.1.1.1/upload -U u1
+               |       |        |
+               |       |        |
+               v       v        v
+          服务器IP    共享名   用户名
+
+
+
+挂载samba的共享目录
+1. 用匿名用户挂载
+mount //10.1.1.1/upload /mnt -o guest
+2. 指定用户名
+mount //10.1.1.1/upload /mnt -o username=u1,password=abc
+
+
+
+
+
+
+Samba 的用户管理：
+
+samba对用户有两个要求：
+1. 必须是服务器的系统用户
+2. 必须用smbpasswd 把该用户添加到samba的用户数据库中
+
+用户管理命令
+smbpasswd u1            <-- 修改samba 用户 u1 的密码
+smbpasswd -a u1         <-- 添加用户, add
+smbpasswd -x u1         <-- 删除用户
+smbpasswd -d u1         <-- 禁用用户, disable
+smbpasswd -e u1         <-- 启用用户, enable
+pdbedit -L              <-- 列出所有用户, List
+pdbedit -Lv             <-- 列出所有用户的详细信息, verbose
+pdbedit -Lv u1          <-- 列出用户 u1 的详细信息
+
+
+
+
+
+
+
+
+
+
+配置文件解析
+
+[global]                                    <-- 表示这是影响全局的配置
+    workgroup = MYGROUP
+    server string = Samba Server Version %v
+    log file = /var/log/samba/log.%m
+    max log size = 50
+    security = user            <-- 非常重要的参数，user 代表客户端必须提供用户名和密码（匿名除外） 
+    passdb backend = tdbsam
+    load printers = yes
+    cups options = raw
+
+[software]
+    comment         = Shared software
+    path            = /external/software
+    guest ok        = yes                   <-- 是否允许匿名访问
+    browseable      = yes                   <-- 是否出现在查询列表中
+    writeable       = no                    <-- 是否可写
+
+[upload]
+    comment              = Upload
+    path                 = /opt/upload
+    guest ok             = no
+    browseable           = yes
+    writeable            = yes 
+    valid users          = u1,u2,+g1             <-- 允许访问的用户和组
+    write list           = u1                    <-- 读写列表
+    read list            = u2,+g1                <-- 只读列表
+    create mode          = 0344                  <-- 控制新建的文件的权限 
+    force create mode    = 0344                  <-- 控制新建的文件的权限 
+    directory mode       = 0777                  <-- 控制新建的目录的权限
+    force directory mode = 0777                  <-- 控制新建的目录的权限
+    hosts deny           = all                   <-- 禁止访问的客户端 
+    hosts allow          = 10.1.1.0/24 except 10.1.1.15/32   <-- 允许访问的客户端
+
+
+关于文件的所有者的定义：
+
+    用户U的uid等于文件F的uid，我们就可以说，文件F的所有者是用户U，
+    文件的uid和文件gid与用户无关，它只是文件本身的两个属性而已。
+
+
+关于系统创建文件时权限的确定：
+
+    1. 传给内核函数的权限 (open, creat, mkdir)
+    2. umask
+
+    传给内核的权限和umask共同计算（位与），得出最终的权限，此权限就是文件最终的权限。
+
+    位与操作：
+
+    1. 传给内核的权限是 0777，八进制的0777就是二进制的111111111
+    2. umask假设是022，八进制的022就是 000010010，取反后111101101
+        111111111
+        111101101
+        ---------
+        111101101   <-- 755
+
+
+
+关于新建的文件/目录的权限的确定：
+
+    系统创建文件时所指定的权限      <-- 由传给创建文件的内核函数的参数决定
+    create mode         <-- 必须在这里，才会出现在最终的文件里
+    force create mode   <-- 只要在这里，就会出现在最终的文件里
+
+    简单来说，如果需要创建一个权限为755的文件，可以设定 fore create mode = 0755
+
+
+
+关于只读权限和读写权限的确定：
+
+writeable = yes
+    1. 在read list中的是只读，不在read list中的可读写
+    2. 同时在write list和read list中，是读写
+
+writeable = no
+    1. 在write list中的可读写
+    2. 在read list中的只读
+    3. 同时在write list和read list中，是读写
+
+
+
+注意的要点：
+
+新建的文件的权限，受两组参数的影响
+1. create mode, 与参与计算的权限进行 AND （位与）操作，也就是说，只有列在这个参数中的位才会保留
+2. force create mode，与参与计算的权限进行 OR （位或）操作，也就是说，只要列在这个参数中的位都会保留
+这两个参数应用的顺序是，先应用第一个(create mode)，再应用第二个(force create mode)，这样的话，如果需要准确指定新建的文件的权限，则可以把这两个参数设置成相同的值。
+新建的目录的权限与此类似，也受两组参数的影响，分别是directory mode, force directory mode, 其特点与新建文件相同。
+
+
+write list 和 read list
+这两个参数用来指定什么用户可以写，什么用户只能读。值得注意的是，如果一个用户同时出现在这两个列表中，那么该用户也具有写的权限（和man文档中描述的不一致） 。
+
+
+writeable (和read only相反）
+这个参数用来控制共享的目录是否可写。值得注意的是，就算writeable=no，但是write list参数包含了某个用户，那么该用户仍然可以写。
+
+
+hosts deny 参数和 hosts allow 参数，如果两者之间有冲突，则hosts allow 中的规则生效。
+
+
+
+
+
+可以设置每个用户使用一个单独的配置文件，做更精细的控制
+1. 在主配置文件/etc/samba/smb.conf 的全局配置里加以下参数：
+config file = /etc/samba/smb.conf.%U        <-- 服务器会把这里的%U解析为登录的用户名
+
+2. 创建用户的配置文件，方法与配置主配置文件相同。下面以用户u1 为例
+vi /etc/samba/smb.conf.u1
+[upload]
+    comment              = Upload
+    path                 = /opt/upload
+    guest ok             = no
+    browseable           = no
+    writeable            = yes 
+    create mode          = 0644
+    force create mode    = 0644
+    directory mode       = 0755
+    force directory mode = 0755
+
+
+
+
+
+通过autofs 自动挂载samba 的共享
+参考之前的autofs的笔记，配置文件中写入类似下面的一行：
+
+upload -fstype=cifs,username=u1,password=abc  ://10.1.1.1/upload

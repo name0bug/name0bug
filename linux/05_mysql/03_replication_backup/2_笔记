@@ -1,0 +1,319 @@
+mysqld 的默认配置文件是 /etc/my.cnf，文件中分段书写参数，每个段落的读取时机如官方文档所说：
+mysqld reads options from the [mysqld] and [server] groups. mysqld_safe reads options from the [mysqld], [server], [mysqld_safe], and [safe_mysqld] groups. mysql.server reads options from the [mysqld] and [mysql.server] groups. 
+
+参数的使用方法可参考官方文档 Server Command Options 部分
+
+范例：
+[mysqld]        <-- 这个段落的内容供服务端使用
+datadir=/db/mysql1/data
+socket=/db/mysql1/mysql.sock
+pid-file=/db/mysql1/mysql.pid
+log-error=/db/mysql1/error.log
+log-bin=/db/mysql1/binlog/binlog
+
+# innodb engine settings
+innodb_log_group_home_dir=/var/lib/mysql/innodb/log
+innodb_log_files_in_group=3
+innodb_data_home_dir=/var/lib/mysql/innodb/data
+innodb_data_file_path=data1:50M;data2:20M:autoextend
+innodb_file_per_table=0
+
+port=3307
+user=mysql
+
+[mysql]         <-- 这个段落的内容供客户端使用
+user=root
+password=abc
+
+
+
+
+
+
+初始化数据库
+编辑好配置文件后，即可初始化数据库。注意，配置文件中[mysqld] 段落必须指明datadir 和 user 这两个参数
+mysql_install_db --defaults-file=/db/mysql1/my.conf
+
+
+
+
+
+
+
+在一台主机上运行多个mysql 服务器
+配置要点：
+1. 每个服务器有相互独立的目录结构和文件
+2. 每个服务器监听不同的端口
+
+步骤：
+1. 如果mysql 用户不存在，就创建mysql 用户
+2. 书写配置文件
+3. 创建所需的目录，设置目录的所有者
+4. 初始化数据库
+5. 启动/关闭/登录 数据库服务器
+
+
+配置范例：
+
+1. 如果mysql 用户不存在，就创建mysql 用户
+如果使用的是rpm 版本，mysql 用户和mysql 组会被自动创建，如果是通过源码编译的形式安装，则需要手动创建
+useradd --system mysql
+
+2. 书写配置文件
+vi /etc/mysqlsrv_1.cnf
+[mysqld]
+datadir=/dev/shm/db1/data
+socket=/dev/shm/db1/mysql.sock
+pid-file=/dev/shm/db1/mysqld.pid
+log-error=/dev/shm/db1/mysqld.log
+log-bin=/dev/shm/db1/binlog/binlog
+port=3311
+user=mysql
+innodb_log_group_home_dir=/dev/shm/db1/innodb/log
+innodb_log_files_in_group=3
+innodb_data_home_dir=/dev/shm/db1/innodb/data
+innodb_data_file_path=data1:50M;data2:20M:autoextend
+innodb_file_per_table=0
+
+3. 创建所需的目录，设置目录的所有者
+mkdir -p /dev/shm/db1/data
+mkdir -p /dev/shm/db1/binlog
+mkdir -p /dev/shm/db1/innodb/log
+mkdir -p /dev/shm/db1/innodb/data
+chown -R mysql.mysql /dev/shm/db1
+
+4. 初始化数据库
+mysql_install_db --defaults-file=/etc/mysqlsrv_1.cnf
+如果使用的是源码安装的版本，需要先进入安装目录，再执行scripts 里面的脚本，假设安装目录是 /usr/local/mysql
+cd /usr/local/mysql
+scripts/mysql_install_db --defaults-file=/etc/mysqlsrv_1.cnf
+
+5. 启动/关闭/登录 数据库服务器
+mysqld_safe --defaults-file=/etc/mysqlsrv_1.cnf &       <-- 启动
+mysqladmin shutdown -S /dev/shm/db1/mysql.sock          <-- 关闭
+mysql -S /dev/shm/db1/mysql.sock                        <-- 登录（socket 方式）
+mysql -h 127.0.0.1 -P 3311                              <-- 登录（网络方式）
+
+
+
+----------------------------
+
+使用笔记里的脚本 genmysqlscript，可以简化整个配置过程，该脚本经测试，可用于mysql server 5.6.14 源码编译版，和mysql server 5.1.71 rpm 版。操作步骤如下：
+1. 根据需要创建mysql 用户
+2. 书写配置文件
+3. 生成服务控制脚本
+[root@localhost ~]# ./genmysqlscript /etc/mysqlsrv_2.cnf 
+What name for this instance [mysqld]: mysqld3312            <-- 这是服务的名称
+Where is the base dir (installation prefix) [/usr]:         <-- mysql 的安装路径，rpm 版是/usr
+Where is the mysqld_safe [/usr/bin/mysqld_safe]:            <-- 直接按enter 接受默认值
+Where is the mysqladmin [/usr/bin/mysqladmin]: 
+Where is the mysql_install_db [/usr/bin/mysql_install_db]: 
+Where is the my_print_defaults [/usr/bin/my_print_defaults]: 
+
+4. 启动/关闭/登录 数据库服务器
+第一次启动服务的时候，服务脚本会根据需要创建所需的目录
+service mysqld3312 start
+service mysqld3312 stop
+mysql -S /dev/shm/db2/mysql.sock                        <-- 登录（socket 方式）
+mysql -h 127.0.0.1 -P 3312                              <-- 登录（网络方式）
+
+
+
+
+二进制日志
+服务器把对数句库的改变，比如插入，删除，更新，创建用户等操作，以二进制的形式存储到日志文件中，这种日志文件就是二进制日志。
+
+对二进制日志的查询可以使用工具mysqlbinlog
+mysqlbinlog <binlog file>
+
+用 mysqlbinlog 解析出来的数据可以直接用工具mysql 应用于数据库上。二进制日志常用于数据库之间的复制，和备份恢复。不同版本的服务器，binlog 的格式可能存在兼容问题，所以，在涉及binlog 的应用中，应考虑服务器版本的兼容性。
+
+
+使用二进制日志恢复误删除的数据，用以了解二进制日志的作用
+1. 服务器启用二进制日志
+   log-bin=logbin
+2. 在服务器上创建一个数据库，创建一个表，插入一些数据，然后把表删除
+3. 新创建一个数据库服务器
+4. 用和服务器版本一致的mysqlbinlog 工具解析服务器的二进制日志，找到灾难发生的位置
+ mysqlbinlog /tmp/binlog.000003 --stop-pos 3496 | less
+5. 把所需的二进制日志解析出来，传给mysql 客户端，即可达到恢复数据的目的
+ mysqlbinlog /tmp/binlog.000002 --stop-pos 3496
+ mysqlbinlog /tmp/binlog.000003 --stop-pos 3496 | mysql -h 127.0.0.1 -P3311 -uroot
+
+
+
+
+
+
+
+
+mysql 中的主从复制结构利用主服务器上的二进制日志来传输数据。主服务器上启用了二进制日志后，主服务器上对数据库的改变会被记录在二进制日志中，从服务器把主服务器的二进制日志拿过来，应用到自己的数据库上，就达到了把主服务器的数据复制过来的目的。
+
+
+
+一主一从复制的配置方法
+
+假设主服务器IP 为10.1.1.1
+    从服务器IP 为10.1.1.2
+
+
+1. 准备工作
+1.1 在主服务器和从服务器上互相绑定对方的主机名
+1.2 同步两台服务器的时间
+1.3 确保防火墙没有阻挡双方之间的通信，可以暂时关闭双方的防火墙
+1.4 关闭SELinux
+1.5 同步两台服务器之间的数据，如果是未上线的服务器，可以省略此步
+
+
+2. 主服务器的配置
+2.1 在主服务器上启用二进制日志，并指定一个大于零的server-id，参考配置如下
+    [mysqld]
+    log-bin=mysql-bin
+    server-id=1
+2.2 重启主服务器
+2.3 创建一个专用的用户，给从服务器使用，并做最小授权。
+    create user repl@10.1.1.2 identified by 'abc';
+    grant replication slave on *.* to repl@10.1.1.2;
+2.4 记录下当前的二进制日志的文件名和位置，后面需要在从服务器上使用
+    show master status;
+    假设这里得到的文件名是binlog.000004, 位置是421
+
+
+3. 从服务器的配置
+3.1 测试到主服务器的连接，确保能成功登录
+    mysql -h 10.1.1.1 -urepl -pabc
+3.2 在从服务器上，指定一个大于零的server-id，此值不能与主服务器相同，参考配置如下
+    [mysqld]
+    server-id=2
+3.3 重启从服务器
+3.4 查看从服务器状态，如果已经开启，就把它关闭
+    show slave status\G
+    stop slave;
+3.5 配置连接主服务器所需的信息
+mysql> change master to
+    -> master_host='127.0.0.1',
+    -> master_port=3311,
+    -> master_user='repl',
+    -> master_password='abc',
+    -> master_log_file='binlog.000004',
+    -> master_log_pos=421;
+
+3.6 启动从服务器线程，并查看状态
+    start slave;
+    show slave status\G
+
+
+
+
+
+
+
+
+双主复制的配置方法
+
+严格来说，mysql 只有一种复制结构，就是主从结构，其它的复制结构都是不同形式的主从结构而已。
+双主复制的配置方法实质上是做两个主从复制。
+
+假设主A 服务器IP 为10.1.1.1
+    主B 服务器IP 为10.1.1.2
+
+1. 以A 为主，B 为从做一个主从复制
+2. 以B 为主，A 为从做另外一个主从复制
+
+注意事项
+双主复制结构中，如果两个主同时修改相同的数据，就有可能造成数据不通步现象，所以做双主复制的话，必须避免两边写相同的数据。参考思路：可以在主A 中写数据库db1，在主B 中写数据库db2。
+
+
+
+
+
+
+通过outfile/infile 来做备份恢复
+用这种方法做备份可以很方便灵活地控制所需备份的数据，所生成的文件不是SQL 语句，不能直接用mysql 工具来执行。
+
+备份：
+select * from tb3 into outfile 'db1.tb3';
+
+恢复：
+load data local infile '/db/backup/db1.tb3' into table tb3;
+
+
+
+
+
+
+通过mysqldump 来备份
+这个工具可以用于备份整个数据库，或者数据库中的某些表，备份的数据包含了表的结构和数据，是SQL 语句，所以可以用mysql 工具直接执行备份文件中的指令来达到恢复数据的目的。mysqldump 工具的版本应该和服务器的版本一致。
+
+常用参数
+shell> mysqldump db_name [tbl_name ...]
+shell> mysqldump --databases db_name ...
+shell> mysqldump --all-databases
+
+备份
+-----------------------------------------------
+备份数据库db1 中的tb1 表
+mysqldump -h 127.0.0.1 -P3311 -uroot db1 tb1
+
+备份整个数据库db2
+mysqldump -h 127.0.0.1 -P3311 -uroot db2 
+
+备份数据库db1 和数据库db2
+mysqldump -h 127.0.0.1 -P3311 -uroot --databases db2 db1
+
+mysqldump 会把结果输出到标准输出，这里进行重定向
+mysqldump -h 127.0.0.1 -P3311 -uroot --databases db1 > db1.sql
+
+
+
+恢复
+-----------------------------------------------
+在恢复数据之前，可以根据需要对备份文件，也就是SQL 文件进行修改。
+mysql -h 127.0.0.1 -P3311 -uroot < db1.sql
+
+
+
+
+
+
+
+编译源码安装mysql 服务器
+1. 确认开发工具及依赖包已经安装好
+   yum install "@development tools" cmake ncurses-devel
+2. 下载源码包
+   wget http://10.1.1.1/software/linux/mysql/mysql-5.6.14.tar.gz
+3. 解压源码，并进入源码目录
+   tar xf xxx.xxx
+   cd xxx 
+4. 查看可使用的编译选项（可选）
+   cmake . -LH 
+5. 配置
+   cmake .
+6. 编译，这里通过两个线程来编译。用多线程编译可能会出错，所以多尝试几次，最后一次用单线程，保证编译不会因为多线程而失败。
+   make -j2 || make -j2 || make -j2 || make
+7. 安装
+   make install
+8. 编辑配置文件，可以参考笔记中的example.my.cnf，假设配置文件存放在/etc/my3311.cnf
+9. 利用脚本genmysqlscript 生成服务控制脚本，以下命令将会在 /etc/init.d/ 下面生成一个服务控制脚本，并安装相应的服务
+   ./genmysqlscript /etc/my3311.cnf
+10. 启动服务
+   service mysqld3311 start
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---------------------
+做主从复制时，主服务器和从服务器的本版要一致，不然就可能会出现关于日志出错的信息。
+
+如果一个服务器同时做主也做从，而且希望这台服务器能够把它从别的主服务器拿到的数据，传给它自己的从服务器，就必须在配置文件中添加以下参数:
+log_slave_updates=1

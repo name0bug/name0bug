@@ -1,0 +1,633 @@
+一、通过yum 安装mysql 数据库，启动服务，并且登录
+
+红帽6：
+    1. yum install mysql-server
+    2. service mysqld start
+    3. mysql
+
+红帽7：
+    1. yum install mariadb mariadb-server
+    2. systemctl start mariadb
+    3. mysql
+
+
+
+二、基本查询
+# 首先用以下命令往数据库中导入一些数据，然后操练接下来的命令
+# mysql < sample.sql
+
+1. 列出所有的库
+show databases;
+
+2. 查询当前正在使用的数据库，和当前登录的用户
+select database();
+select user();
+
+3. 切换当前数据库
+use db1
+
+4. 列出当前库的所有表
+show tables;
+show tables from db1;   <-- 列出指定库(db1)的表
+
+5. 查询表的结构
+desc table_name;
+
+5. 查询表的数据
+select * from table_name;
+
+
+
+三、SQL 语言综合练习
+1. 使用系统默认的字符集创建一个数据库
+create database d1;
+
+2. 查看数据库列表，以及刚刚创建的数据库的创建信息
+show databases;
+show create database d1;
+
+3. 删除数据库
+drop database d1;
+
+4. 使用utf8 字符集创建一个数据库company
+create database company default character set = utf8;
+
+5. 创建一个员工表emp，字段如下：
+create table emp (
+ename char(20),
+sex char(1),
+salary int) engine=innodb;
+
+6. 查看数据库中的表，以及刚刚创建的表的创建信息
+show tables;
+show create table emp\G
+
+7. 查看表的结构描述信息
+desc emp;
+
+8. 把表emp 复制到另外一个表中
+create table emp_bak as select * from emp;
+
+9. 查看数据库中所有的表
+show tables;
+
+10. 把emp_bak 改名为emp_bak2
+rename table emp_bak to emp_bak2;
+
+11. 删除表emp_bak2
+drop table emp_bak2;
+
+12. 修改表emp，使之看起来像下面的样子
+mysql> desc emp;
++----------+--------------------------------+------+-----+---------+----------------+
+| Field    | Type                           | Null | Key | Default | Extra          |
++----------+--------------------------------+------+-----+---------+----------------+
+| empno    | mediumint(8) unsigned zerofill | NO   | PRI | NULL    | auto_increment |
+| ename    | char(20)                       | YES  |     | NULL    |                |
+| sex      | char(1)                        | YES  |     | NULL    |                |
+| age      | tinyint(4)                     | YES  |     | NULL    |                |
+| salary   | decimal(10,2) unsigned         | YES  |     | NULL    |                |
+| hiredate | date                           | YES  |     | NULL    |                |
+| deptno   | tinyint(4)                     | YES  |     | NULL    |                |
++----------+--------------------------------+------+-----+---------+----------------+
+alter table emp add column empno mediumint(8) unsigned zerofill not null auto_increment primary key first;
+alter table emp add column age tinyint(4) after sex;            <-- 把列增加的指定列的后面
+alter table emp change salary salary decimal(10,2) unsigned;    <-- 改数据类型
+alter table emp add column hierdate date;        <-- 这里故意把单词hiredate 写错
+alter table emp change hierdate hiredate date;   <-- 改列名
+alter table emp add column deptno tinyint(4);
+alter table emp add column manager int;          <-- 这两条命令仅作删除字段练习，非必须
+alter table emp drop manager;                    <-- 删除字段
+
+13. 把员工数据导入表emp 中
+./genemp.sh name_list > emp.sql
+mysql < emp.sql
+
+14. 创建一个部门表 dept
+CREATE TABLE `dept` (
+  `deptno` tinyint unsigned zerofill NOT NULL,
+  `dname` char(20) DEFAULT NULL,
+  `manager` mediumint(8) unsigned zerofill,
+  PRIMARY KEY (`deptno`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8
+
+15. 往表dept 中插入数据
+insert into dept values
+(1,'IT',1),
+(2,'HR',5),
+(3,'Marketing',7),
+(4,'Sales',8),
+(5,'Purchasing',10),
+(6,'Operation',20),
+(7,'Admin',15),
+(8,'Executive',18),
+(9,'R&D',15),
+(10,'Financial',12);
+
+
+
+16. 按顺序操练以下练习
+
+把表emp 复制一份，命名为emp2
+create table emp2 as select * from emp;
+
+
+删除emp2 表中员工号码为1 的记录
+mysql> delete from emp2 where empno = 1;
+Query OK, 1 row affected (0.00 sec)
+
+
+删除emp2 表中的所有记录
+mysql> delete from emp2;
+Query OK, 15 rows affected (0.00 sec)
+
+删除表 emp2
+mysql> drop table emp2;
+Query OK, 0 rows affected (0.00 sec)
+
+
+列出员工号码在10-15 （包含） 之间的员工
+mysql> select * from emp where empno >= 10 and empno <=15;
++----------+----------------+------+------+--------+------------+--------+
+| empno    | ename          | sex  | age  | salary | hiredate   | deptno |
++----------+----------------+------+------+--------+------------+--------+
+| 00000010 | tangzhongsheng | M    |   55 |  30.00 | 2014-03-14 |      1 |
+| 00000011 | chenxinwen     | M    |   23 |  32.00 | 2014-06-28 |      2 |
+| 00000012 | yangshuo       | M    |   38 |  12.00 | 2014-03-25 |      8 |
+| 00000013 | wangmeng       | M    |   47 |   6.00 | 2014-02-22 |      4 |
+| 00000014 | huchao         | M    |   45 |  21.00 | 2014-06-26 |      3 |
+| 00000015 | zhoushenghui   | M    |   29 |  29.00 | 2014-07-01 |      1 |
++----------+----------------+------+------+--------+------------+--------+
+
+
+列出员工的平均工资
+mysql> select avg(salary) from emp;
++-------------+
+| avg(salary) |
++-------------+
+|   17.562500 |
++-------------+
+
+
+列出女员工的平均工资，以下两种方法都可以
+mysql> select avg(salary) from emp where sex = 'F';
+mysql> select sex, avg(salary) avg_sal from emp group by sex having sex = 'F';
++-------------+
+| avg(salary) |
++-------------+
+|    7.000000 |
++-------------+
+
+
+列出每个部门的平均工资
+mysql> select deptno,avg(salary)avg_sal from emp group by deptno;
++--------+-----------+
+| deptno | avg_sal   |
++--------+-----------+
+|      1 | 29.500000 |
+|      2 | 32.000000 |
+|      3 | 19.500000 |
+|      4 | 10.000000 |
+|      7 | 23.000000 |
+|      8 | 10.666667 |
+|     10 | 18.666667 |
++--------+-----------+
+
+
+列出每个部门的最高工资
+mysql> select deptno,max(salary)max_sal from emp group by deptno;
++--------+---------+
+| deptno | max_sal |
++--------+---------+
+|      1 |   30.00 |
+|      2 |   32.00 |
+|      3 |   21.00 |
+|      4 |   17.00 |
+|      7 |   23.00 |
+|      8 |   14.00 |
+|     10 |   23.00 |
++--------+---------+
+
+
+列出每个部门的最低工资
+mysql> select deptno,min(salary)min_sal from emp group by deptno;
++--------+---------+
+| deptno | min_sal |
++--------+---------+
+|      1 |   29.00 |
+|      2 |   32.00 |
+|      3 |   18.00 |
+|      4 |    6.00 |
+|      7 |   23.00 |
+|      8 |    6.00 |
+|     10 |   15.00 |
++--------+---------+
+
+
+列出员工的平均年龄
+mysql> select avg(age) avg_age from emp;
++---------+
+| avg_age |
++---------+
+| 41.1875 |
++---------+
+
+列出工资最高的员工的姓名和工资
+mysql> select ename,salary from emp where salary = (select max(salary) from emp);
++----------+--------+
+| ename    | salary |
++----------+--------+
+| wangmeng | 31.00 |
++----------+--------+
+1 row in set (0.00 sec)
+
+把所有员工的工资涨10倍
+mysql> update emp set salary = salary * 10;
+Query OK, 16 rows affected (0.00 sec)
+Rows matched: 16  Changed: 16  Warnings: 0
+
+
+把女员工的工资涨20%
+mysql> update emp set salary = salary * (1+0.2) where sex = 'F';
+Query OK, 1 row affected (0.00 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+
+把员工号码为15的员工的工资增加5块
+mysql> update emp set salary = salary + 5 where empno = 15;
+Query OK, 1 row affected (0.00 sec)
+Rows matched: 1  Changed: 1  Warnings: 0
+
+
+把员工号码为11的员工由原部门调到IT 部
+注意：以下两条语句都可以完成任务，不过，如果IT 部门不存在，第二条语句将会把deptno 设为NULL，而第一条语句在这种情况下不会改变deptno。
+mysql> update emp e, dept d set e.deptno = d.deptno where e.empno = 11 and d.dname = 'IT';
+mysql> update emp set deptno = (select deptno from dept where dname = 'IT') where empno = 11;
+
+
+把员工号码为4 的员工设为IT 部的经理
+注意：以下两条语句都可以完成任务，不过，如果员工号码为4 的员工不存在，第二条语句将会把manager 设为NULL，而第一条语句在这种情况下不会改变manager。
+mysql> update dept d,emp e set d.manager = e.empno where d.dname = 'IT' and e.empno = 4;
+mysql> update dept set manager=(select empno from emp where empno=4) where dname='IT';
+
+
+把所有经理的工资增加10%
+mysql> update emp set salary = salary * (1+0.1) where empno in (select manager from dept);
+Query OK, 7 rows affected (0.01 sec)
+Rows matched: 7  Changed: 7  Warnings: 0
+
+
+把所有员工的工资增加10%，除了3号员工
+mysql> update emp set salary=salary*1.1 where empno != 3;
+Query OK, 15 rows affected (0.00 sec)
+Rows matched: 15  Changed: 15  Warnings: 0
+
+
+列出10月至12月入职的员工的姓名、性别、工资、部门名称，入职日期
+mysql> select e.ename,e.sex,e.salary,e.hiredate,d.dname from emp e,dept d where month(hiredate) between 10 and 12 and e.deptno=d.deptno;
++--------------+------+--------+------------+-----------+
+| ename        | sex  | salary | hiredate   | dname     |
++--------------+------+--------+------------+-----------+
+| zhangweibing | M    | 165.00 | 2014-11-05 | Financial |
++--------------+------+--------+------------+-----------+
+
+
+把所有工资处于100块到200块之间员工的右列信息输出到一个外部文件中：员工号码、姓名、性别、年龄、工资、部门名称、上司名称
+mysql> select e.empno,e.ename,e.sex,e.age,e.salary,d.dname,e2.ename superior from emp e,dept d,emp e2 where e.deptno = d.deptno and d.manager = e2.empno and e.salary between 100 and 200 into outfile '/tmp/emp_data';
+Query OK, 5 rows affected (0.00 sec)
+
+
+列出工龄最大的5位员工的全部信息，以及工龄（以年为单位）
+mysql> select *,(to_days(curdate()) - to_days(hiredate))/365 serve_years from emp order by hiredate limit 5;
++----------+----------------+------+------+--------+------------+--------+-------------+
+| empno    | ename          | sex  | age  | salary | hiredate   | deptno | serve_years |
++----------+----------------+------+------+--------+------------+--------+-------------+
+| 00000016 | tangyongbin    | M    |   53 | 154.00 | 2014-02-17 |      8 |      0.6329 |
+| 00000013 | wangmeng       | M    |   47 |  66.00 | 2014-02-22 |      4 |      0.6192 |
+| 00000008 | liuzhifeng     | M    |   57 | 278.30 | 2014-03-04 |     10 |      0.5918 |
+| 00000010 | tangzhongsheng | M    |   55 | 363.00 | 2014-03-14 |      1 |      0.5644 |
+| 00000005 | longminfan     | F    |   36 | 101.64 | 2014-03-22 |      4 |      0.5425 |
++----------+----------------+------+------+--------+------------+--------+-------------+
+
+
+列出所有员工的员工号码、姓名、部门号码、工资，先按部门号码顺序排序，再按工资倒序排序
+mysql> select empno,ename,deptno,salary from emp order by deptno,salary desc;
++----------+----------------+--------+--------+
+| empno    | ename          | deptno | salary |
++----------+----------------+--------+--------+
+| 00000010 | tangzhongsheng |    001 | 363.00 |
+| 00000015 | zhoushenghui   |    001 | 356.95 |
+| 00000011 | chenxinwen     |    001 | 352.00 |
+| 00000014 | huchao         |    003 | 231.00 |
+| 00000007 | huangjunjie    |    003 | 217.80 |
+| 00000003 | liqing         |    004 | 170.00 |
+| 00000009 | tangjincheng   |    004 | 110.00 |
+| 00000005 | longminfan     |    004 | 101.64 |
+| 00000013 | wangmeng       |    004 |  66.00 |
+| 00000002 | tuxiaogang     |    007 | 253.00 |
+| 00000016 | tangyongbin    |    008 | 154.00 |
+| 00000012 | yangshuo       |    008 | 145.20 |
+| 00000004 | longxinpeng    |    008 |  72.60 |
+| 00000008 | liuzhifeng     |    010 | 278.30 |
+| 00000006 | xiaozhiqi      |    010 | 198.00 |
+| 00000001 | zhangweibing   |    010 | 165.00 |
++----------+----------------+--------+--------+
+
+
+列出每个部门的经理的右列信息：员工号码、姓名、性别、年龄、工资、部门名称
+mysql> select empno,ename,sex,age,salary,d.dname from emp e,dept d,dept d2 where e.deptno = d.deptno and empno = d2.manager;
++----------+----------------+------+------+--------+-----------+
+| empno    | ename          | sex  | age  | salary | dname     |
++----------+----------------+------+------+--------+-----------+
+| 00000004 | longxinpeng    | M    |   45 |  72.60 | Executive |
+| 00000005 | longminfan     | F    |   36 | 101.64 | Sales     |
+| 00000007 | huangjunjie    | M    |   32 | 217.80 | Marketing |
+| 00000008 | liuzhifeng     | M    |   57 | 278.30 | Financial |
+| 00000010 | tangzhongsheng | M    |   55 | 363.00 | IT        |
+| 00000015 | zhoushenghui   | M    |   29 | 356.95 | IT        |
+| 00000015 | zhoushenghui   | M    |   29 | 356.95 | IT        |
+| 00000012 | yangshuo       | M    |   38 | 145.20 | Executive |
++----------+----------------+------+------+--------+-----------+
+
+
+统计各个部门的总人数，输出部门名称和部门的总人数
+mysql> select d.dname,count(e.empno) count from emp e,dept d where e.deptno = d.deptno group by e.deptno;
++-----------+-------+
+| dname     | count |
++-----------+-------+
+| IT        |     3 |
+| Marketing |     2 |
+| Sales     |     4 |
+| Admin     |     1 |
+| Executive |     3 |
+| Financial |     3 |
++-----------+-------+
+
+
+统计男女员工的总数
+mysql> select sex,count(*) count from emp group by sex;
++------+-------+
+| sex  | count |
++------+-------+
+| F    |     1 |
+| M    |    15 |
++------+-------+
+
+
+统计各个部门里面男女员工的总数，输出部门名称，性别，总数
+mysql> select d.dname,sex,count(e.empno) count from emp e,dept d where e.deptno = d.deptno group by e.deptno,sex;
++-----------+------+-------+
+| dname     | sex  | count |
++-----------+------+-------+
+| IT        | M    |     3 |
+| Marketing | M    |     2 |
+| Sales     | F    |     1 |
+| Sales     | M    |     3 |
+| Admin     | M    |     1 |
+| Executive | M    |     3 |
+| Financial | M    |     3 |
++-----------+------+-------+
+
+
+统计各个部门的工资总和，输出部门名称和各个部门的工资总和，并按工资总和从大到小排序
+mysql> select d.dname,sum(salary) sal_sum from dept d,emp e where d.deptno = e.deptno group by e.deptno order by sal_sum desc;
++-----------+---------+
+| dname     | sal_sum |
++-----------+---------+
+| IT        | 1071.95 |
+| Financial |  641.30 |
+| Marketing |  448.80 |
+| Sales     |  447.64 |
+| Executive |  371.80 |
+| Admin     |  253.00 |
++-----------+---------+
+
+
+列出平均工资大于200块的部门的名称和平均工资
+mysql> select d.dname,avg(salary) avg_sal from dept d,emp e where d.deptno = e.deptno group by e.deptno having avg_sal > 250;
++-------+------------+
+| dname | avg_sal    |
++-------+------------+
+| IT    | 357.316667 |
+| Admin | 253.000000 |
++-------+------------+
+
+
+列出所有员工的姓名，员工号码，部门名称，经理的名称
+mysql> select e.ename Name,e.empno Empno,d.dname Department,x.ename Boss from emp e,dept d,emp x where e.deptno = d.deptno and d.manager = x.empno;
++----------------+----------+------------+--------------+
+| Name           | Empno    | Department | Boss         |
++----------------+----------+------------+--------------+
+| zhangweibing   | 00000001 | Financial  | yangshuo     |
+| tuxiaogang     | 00000002 | Admin      | zhoushenghui |
+| liqing         | 00000003 | Sales      | liuzhifeng   |
+| longminfan     | 00000005 | Sales      | liuzhifeng   |
+| xiaozhiqi      | 00000006 | Financial  | yangshuo     |
+| huangjunjie    | 00000007 | Marketing  | huangjunjie  |
+| liuzhifeng     | 00000008 | Financial  | yangshuo     |
+| tangjincheng   | 00000009 | Sales      | liuzhifeng   |
+| tangzhongsheng | 00000010 | IT         | longxinpeng  |
+| chenxinwen     | 00000011 | IT         | longxinpeng  |
+| wangmeng       | 00000013 | Sales      | liuzhifeng   |
+| huchao         | 00000014 | Marketing  | huangjunjie  |
+| zhoushenghui   | 00000015 | IT         | longxinpeng  |
++----------------+----------+------------+--------------+
+13 rows in set (0.00 sec)           <-- 共有16条员工记录，为何这里只显示13条记录？
+
+
+列出工资比15号员工高的所有员工的全部信息
+mysql> select * from emp where salary > (select salary from emp where empno = 15);
++----------+----------------+------+------+--------+------------+--------+
+| empno    | ename          | sex  | age  | salary | hiredate   | deptno |
++----------+----------------+------+------+--------+------------+--------+
+| 00000010 | tangzhongsheng | M    |   55 | 363.00 | 2014-03-14 |      1 |
++----------+----------------+------+------+--------+------------+--------+
+
+
+列出姓名的第一个字符是 l，第二个字符是 o 或者 i ，以 g 结尾的员工的全部信息
+mysql> select * from emp where ename regexp '^l[oi].*g$';
++----------+-------------+------+------+--------+------------+--------+
+| empno    | ename       | sex  | age  | salary | hiredate   | deptno |
++----------+-------------+------+------+--------+------------+--------+
+| 00000003 | liqing      | M    |   27 | 170.00 | 2014-06-27 |      4 |
+| 00000004 | longxinpeng | M    |   45 |  72.60 | 2014-09-19 |      8 |
+| 00000008 | liuzhifeng  | M    |   57 | 278.30 | 2014-03-04 |     10 |
++----------+-------------+------+------+--------+------------+--------+
+
+
+创建一个表passwd，把/etc/passwd 里面的数据导进来
+mysql> create table passwd (
+name char(20),
+passwd char(1),
+uid int,
+gid int,
+comment char(50),
+home char(255),
+shell char(255));
+mysql> load data local infile '/etc/passwd' into table passwd fields terminated by ':';
+
+
+创建一个表group，把/etc/group 里面的数据导进来（group 名字是SQL 的关键字，不能用做表名，所以这里改为sys_group）
+mysql> create table sys_group (
+name char(20),
+passwd char(1),
+gid int,
+userlist char(255));
+mysql> load data local infile '/etc/group' into table sys_group fields terminated by ':';
+
+
+列出passwd 表中所有login shell 为bash 的用户
+mysql> select * from passwd where shell like '%bash';
++-------+--------+------+------+--------------+----------------+-----------+
+| name  | passwd | uid  | gid  | comment      | home           | shell     |
++-------+--------+------+------+--------------+----------------+-----------+
+| root  | x      |    0 |    0 | root         | /root          | /bin/bash |
+| user  | x      |  500 |  500 |              | /home/user     | /bin/bash |
+| mysql | x      |   27 |   27 | MySQL Server | /var/lib/mysql | /bin/bash |
++-------+--------+------+------+--------------+----------------+-----------+
+
+
+统计出每种login shell 的用户数量
+mysql> select count(*) count,shell from passwd group by shell order by count;
++-------+----------------+
+| count | shell          |
++-------+----------------+
+|     1 | /bin/sync      |
+|     1 | /sbin/shutdown |
+|     1 | /sbin/halt     |
+|     3 | /bin/bash      |
+|    24 | /sbin/nologin  |
++-------+----------------+
+
+
+列出每个用户的用户名，uid，gid，以及初始组的名字
+mysql> select p.name,p.uid,p.gid,g.name group_name from passwd p, sys_group g where p.gid = g.gid;
++-----------+-------+-------+------------+
+| name      | uid   | gid   | group_name |
++-----------+-------+-------+------------+
+| root      |     0 |     0 | root       |
+| sync      |     5 |     0 | root       |
+| shutdown  |     6 |     0 | root       |
+| halt      |     7 |     0 | root       |
+| operator  |    11 |     0 | root       |
+| bin       |     1 |     1 | bin        |
+
+
+
+四、操练登录
+
+    1. 通过本地socket登录
+
+        mysql
+
+    2. 删除/或者改名 /var/lib/mysql/mysql.sock 文件，然后再次尝试登录，观察错误信息
+
+        rm /var/lib/mysql/mysql.sock
+        mysql
+
+    3. 此时没了socket文件，但是仍然能够通过网络登录
+
+        mysql -h 127.0.0.1
+
+    4. 重启数据库服务器后，mysql.sock文件会被重新生成
+
+        systemctl restart mariadb
+        ls /var/lib/mysql/mysql.sock
+
+
+五、对刚装好的数据库做安全加固工作
+
+    运行命令：mysql_secure_installation
+
+    注：基本上都选择 yes
+
+
+六、导入一些测试数据
+
+    1. 创建库和表
+        create database company default char set utf8;
+        use company
+        CREATE TABLE `emp` (
+          `ename` char(20) DEFAULT NULL,
+          `sex` char(1) DEFAULT NULL,
+          `age` tinyint(4) DEFAULT NULL,
+          `salary` int(11) DEFAULT NULL,
+          `hiredate` date DEFAULT NULL,
+          `deptno` tinyint(4) DEFAULT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8
+
+    2. 导入数据
+        mysql < emp.sql
+
+
+七、操练插入语句insert
+
+    insert into emp values('zhangsan', 'M', 18, 20, '2018-09-10', 10);
+    insert into emp (ename, sex) values('lisi', 'F');
+    insert into emp (ename, sex) values('lisi', 'F'),('wangwu', 'M');
+
+
+八、操练delete和truncate命令
+
+    1. 复制原表
+
+        create table emp2 as select * from emp;
+
+    2. 删除记录
+    
+        select count(*) from emp;
+        select count(*) from emp where age >= 50;
+        delete from emp where age >= 50;
+        select count(*) from emp;
+
+    3. 截断表
+
+        truncate table emp;
+        select count(*) from emp;
+
+
+九、联表查询
+
+    1. 创建库和表
+        create database company default char set utf8;
+        use company
+
+        # 创建员工表
+        CREATE TABLE `emp` (
+          `empno` int(11) NOT NULL AUTO_INCREMENT,
+          `ename` char(20) DEFAULT NULL,
+          `sex` char(1) DEFAULT NULL,
+          `age` tinyint(4) DEFAULT NULL,
+          `salary` int(11) DEFAULT NULL,
+          `hiredate` date DEFAULT NULL,
+          `deptno` tinyint(4) DEFAULT NULL,
+          PRIMARY KEY (`empno`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8
+
+        # 创建部门表
+        CREATE TABLE `dept` (
+          `deptno` int(11) NOT NULL AUTO_INCREMENT,
+          `dname` char(20) NOT NULL,
+          `manager` int(11) NOT NULL,
+          PRIMARY KEY (`deptno`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8
+
+    2. 导入数据
+        mysql < emp.sql
+        mysql < dept.sql
+
+    3. 查询名为Cora的员工的名字，工号，部门号，以及其部门名字和上司的名字
+
+        select
+            emp.empno,
+            emp.ename,
+            emp.deptno,
+            dept.dname,
+            emp2.ename manager_name
+        from emp,
+             dept,
+             emp as emp2
+        where
+            emp.deptno = dept.deptno and
+            dept.manager = emp2.empno and
+            emp.ename = 'Cora';

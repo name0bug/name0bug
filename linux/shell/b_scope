@@ -1,0 +1,25 @@
+#!/bin/bash
+
+demo() {
+    local s a
+    echo "demo args num: " $#
+    # echo ${2[*]}
+    echo "hello v = $v, a = ${a[*]}"
+    v=88
+    s=1999
+}
+
+v=34
+a=(1 2 3 4)
+
+# demo $v "${a[@]}"
+# demo 34 1 2 3 4
+echo "s = $s"
+demo
+echo "main v: $v"
+echo "demo s: $s"
+
+# for i in "$*"; do
+    # echo "args: "$i
+# done
+

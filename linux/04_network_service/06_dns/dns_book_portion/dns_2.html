@@ -1,0 +1,284 @@
+<html><head>
+<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1"><title>Abbreviations (DNS and BIND, 4th Edition)</title>
+</head><body margin="10" bgcolor="white">
+<h2 class="sect1">4.4. Abbreviations</h2>
+
+
+<a name="INDEX-522"> </a><a name="INDEX-523"> </a><a name="INDEX-524">At this point, we have created all the
+files necessary for a primary master name server. Let's go back
+and revisit the zone data files; there are shortcuts we didn't
+use. Unless you see and understand the long form first, though, the
+short form can look very cryptic. Now that you know the long form and
+have seen the BIND configuration file, we'll show you the
+shortcuts.<p></p></a><p><a name="INDEX-524">
+
+
+</a><a name="dns4-CHP-4-SECT-4.1"></a></p><div class="sect2"><a name="dns4-CHP-4-SECT-4.1">
+<h3 class="sect2">4.4.1. Appending Domain Names</h3>
+
+
+</a><a name="INDEX-525"> </a><a name="INDEX-526">The second field of a
+<em class="filename">primary</em></a><a name="INDEX-527"> directive (BIND 4) or
+<em class="filename">zone</em> statement (BIND 8 and 9) specifies a domain
+name. This domain name is the key to the most useful shortcut. This
+domain name is the <em class="emphasis">origin</em> of all the data in the
+zone data file. The origin is appended to all names in the zone data
+file that don't end in a dot, and will be different for each
+zone data file since each file describes a different zone.<p></p><p>
+
+
+Since the origin is appended to names, instead of entering
+<em class="emphasis">robocop.movie.edu</em>'s
+address in <em class="filename">db.movie.edu</em> like this:</p><p>
+
+
+</p><blockquote><pre class="code">robocop.movie.edu.    IN A     192.249.249.2</pre></blockquote>
+
+
+we could have entered it like this:<p></p><p>
+
+
+</p><blockquote><pre class="code">robocop    IN A     192.249.249.2</pre></blockquote>
+
+
+In the <em class="filename">db.192.24.249</em> file we entered this:<p></p><p>
+
+
+</p><blockquote><pre class="code">2.249.249.192.in-addr.arpa.  IN PTR robocop.movie.edu.</pre></blockquote>
+
+
+Since <em class="filename">249.249.192.in-addr.arpa</em> is the origin, we
+could have entered:<p></p><p>
+
+
+</p><blockquote><pre class="code">2  IN PTR robocop.movie.edu.</pre></blockquote>
+
+
+Remember our earlier warning not to omit the trailing dot when using
+the fully qualified domain names? Suppose you forget the
+</a><a name="INDEX-528"> </a><a name="INDEX-529">trailing
+</a><a name="INDEX-530">dot. An entry like:<p></p><p>
+
+
+</p><blockquote><pre class="code">robocop.movie.edu    IN A     192.249.249.2</pre></blockquote>
+
+
+turns into an entry for <em class="emphasis">robocop.movie.edu.movie.edu</em>, not what
+you intended at all.<p></p><p>
+</p></a></div><a name="INDEX-530">
+
+
+
+
+</a><a name="dns4-CHP-4-SECT-4.2"></a><div class="sect2"><a name="dns4-CHP-4-SECT-4.2">
+<h3 class="sect2">4.4.2. The @ Notation</h3>
+
+
+</a><a name="INDEX-531">If a domain name
+is the <em class="emphasis">same</em> as the origin, the name can be
+specified as "@". This is most often seen in the
+</a><a name="INDEX-532">SOA record in the zone data files. The SOA
+records could have been entered this way:<p></p><p>
+
+
+</p><blockquote><pre class="code">@ IN SOA terminator.movie.edu. al.robocop.movie.edu. (
+                          1        ; Serial
+                          3h       ; Refresh after 3 hours
+                          1h       ; Retry after 1 hour
+                          1w       ; Expire after 1 week
+                          1h )     ; Negative caching TTL of 1 hour</pre></blockquote>
+</a></div><a name="INDEX-532">
+
+
+
+
+</a><a name="dns4-CHP-4-SECT-4.3"></a><div class="sect2"><a name="dns4-CHP-4-SECT-4.3">
+<h3 class="sect2">4.4.3. Repeat Last Name</h3>
+
+
+If a </a><a name="INDEX-533">resource record name (that starts in
+the first column) is a </a><a name="INDEX-534">space or </a><a name="INDEX-535">tab, then the name from the
+last resource record is used. You use this if there are multiple
+resource records for a name. Here's an example in which there
+are two address records for one name:<p></p><p>
+
+
+</p><blockquote><pre class="code">wormhole   IN A     192.249.249.1
+           IN A     192.253.253.1</pre></blockquote>
+
+
+In the second address record, the name <em class="emphasis">wormhole</em> is implied. You can use this
+shortcut even if the resource records are of different types.<p></p><p>
+</p></a></div><a name="INDEX-535">
+
+
+
+
+</a><a name="dns4-CHP-4-SECT-4.4"></a><div class="sect2"><a name="dns4-CHP-4-SECT-4.4">
+<h3 class="sect2">4.4.4. The Shortened Zone Data Files</h3>
+
+
+</a><a name="INDEX-536">
+</a><a name="INDEX-537"> </a><a name="INDEX-538">Now that we have shown you the
+abbreviations, we'll repeat the zone data files, making use of
+these shortcuts.<p></p><p>
+
+
+Here are the contents of the file <em class="filename">db.movie.edu</em>:</p><p>
+
+
+</p><blockquote><pre class="code">$TTL 3h
+;
+; Origin added to names not ending
+; in a dot: movie.edu
+;
+
+@ IN SOA terminator.movie.edu. al.robocop.movie.edu. (
+                          1        ; Serial
+                          3h       ; Refresh after 3 hours
+                          1h       ; Retry after 1 hour
+                          1w       ; Expire after 1 week
+                          1h )     ; Negative caching TTL of 1 hour
+
+;
+; Name servers (The name '@' is implied)
+;
+           IN NS  terminator.movie.edu.
+           IN NS  wormhole.movie.edu.
+
+;
+; Addresses for the canonical names
+;
+localhost  IN A     127.0.0.1
+robocop    IN A     192.249.249.2
+terminator IN A     192.249.249.3
+diehard    IN A     192.249.249.4
+misery     IN A     192.253.253.2
+shining    IN A     192.253.253.3
+carrie     IN A     192.253.253.4
+
+wormhole   IN A     192.249.249.1
+           IN A     192.253.253.1
+
+;
+; Aliases
+;
+bigt       IN CNAME terminator
+dh         IN CNAME diehard
+wh         IN CNAME wormhole
+
+;
+; Interface specific names
+;
+wh249      IN A     192.249.249.1
+wh253      IN A     192.253.253.1</pre></blockquote>
+
+
+Here are the contents of the file <em class="filename">db.192.249.249
+</em>:<p></p><p>
+
+
+</p><blockquote><pre class="code">$TTL 3h
+;
+; Origin added to names not ending
+; in a dot: 249.249.192.in-addr.arpa
+;
+
+@ IN SOA terminator.movie.edu. al.robocop.movie.edu. (
+                          1        ; Serial
+                          3h       ; Refresh after 3 hours
+                          1h       ; Retry after 1 hour
+                          1w       ; Expire after 1 week
+                          1h )     ; Negative caching TTL of 1 hour
+
+;
+; Name servers (The name '@' is implied)
+;
+   IN NS  terminator.movie.edu.
+   IN NS  wormhole.movie.edu.
+
+;
+; Addresses point to canonical names
+;
+1  IN PTR wormhole.movie.edu.
+2  IN PTR robocop.movie.edu.
+3  IN PTR terminator.movie.edu.
+4  IN PTR diehard.movie.edu.</pre></blockquote>
+
+
+Here are the contents of the file <em class="filename">db.192.253.253</em>:<p></p><p>
+
+
+</p><blockquote><pre class="code">$TTL 3h
+;
+; Origin added to names not ending
+; in a dot: 253.253.192.in-addr.arpa
+;
+
+@ IN SOA terminator.movie.edu. al.robocop.movie.edu. (
+                          1        ; Serial
+                          3h       ; Refresh after 3 hours
+                          1h       ; Retry after 1 hour
+                          1w       ; Expire after 1 week
+                          1h )     ; Negative caching TTL of 1 hour
+
+;
+; Name servers (The name '@' is implied)
+;
+   IN NS  terminator.movie.edu.
+   IN NS  wormhole.movie.edu.
+
+;
+; Addresses point to canonical names
+;
+1  IN PTR wormhole.movie.edu.
+2  IN PTR misery.movie.edu.
+3  IN PTR shining.movie.edu.
+4  IN PTR carrie.movie.edu.</pre></blockquote>
+
+
+Here are the contents of the file <em class="filename">db.127.0.0 </em>:<p></p><p>
+
+
+</p><blockquote><pre class="code">$TTL 3h
+@ IN SOA terminator.movie.edu. al.robocop.movie.edu. (
+                          1        ; Serial
+                          3h       ; Refresh after 3 hours
+                          1h       ; Retry after 1 hour
+                          1w       ; Expire after 1 week
+                          1h )     ; Negative caching TTL of 1 hour
+
+   IN NS  terminator.movie.edu.
+   IN NS  wormhole.movie.edu.
+
+1  IN PTR localhost.</pre></blockquote>
+
+
+While looking at the new <em class="filename">db.movie.edu</em> file, you
+may notice that we could have removed <em class="emphasis">movie.edu</em> from the host names of the SOA
+and NS records like this:<p></p><p>
+
+
+</p><blockquote><pre class="code">@ IN SOA terminator al.robocop (
+                          1        ; Serial
+                          3h       ; Refresh after 3 hours
+                          1h       ; Retry after 1 hour
+                          1w       ; Expire after 1 week
+                          1h )     ; Negative caching TTL of 1 day
+
+  IN NS  terminator
+  IN NS  wormhole</pre></blockquote>
+
+
+You can't do this in the other zone data files because their
+origins are different. In <em class="filename">db.movie.edu</em>, we leave
+these names as fully qualified domain names so that the NS and SOA
+records are exactly the same for <em class="emphasis">all</em> the zone
+data</a><a name="INDEX-539">
+</a><a name="INDEX-540">
+</a><a name="INDEX-541">
+files.</a><a name="INDEX-542"> </a><a name="INDEX-543"> </a><a name="INDEX-544"><p></p><p>
+</p></a></div><a name="INDEX-544">
+
+
+</body></html>
